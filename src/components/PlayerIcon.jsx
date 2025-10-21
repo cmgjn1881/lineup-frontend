@@ -13,7 +13,7 @@ const PlayerIcon = ({ player, shirtColor = 'bg-blue-600', textColor = 'text-whit
     // 1. 셔츠 모양 컨테이너
     <div
       className="relative w-16 h-16 cursor-grab select-none flex flex-col items-center justify-center text-center"
-      // 💡 드래그 앤 드롭 구현 시 여기에 draggable 속성을 추가할 수 있습니다.
+      draggable="false" // 🔑 브라우저 기본 드래그 동작 방지
     >
       {/* 2. 셔츠 상의 모양 (CSS로 구현) */}
       <div

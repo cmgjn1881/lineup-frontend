@@ -1,53 +1,17 @@
 // src/pages/FormationPage.jsx
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FootballPitch from '../components/FootballPitch'; // 🔑 축구장 컴포넌트 임포트
 import PlayerIcon from '../components/PlayerIcon';
 import { Shield, RotateCcw, List, Save } from 'lucide-react'; // Trash2, Edit 아이콘 추가
-
-// Y축(세로)은 0% (골대)에서 100% (반대편 골대)까지이며, 골키퍼는 Y=90% 근처에 배치
-const POSITIONS = {
-  // [Y축, X축]
-  GK: [90, 50],
-
-  // 4백 (수비 라인: Y=75%)
-  RB: [75, 10], // 라이트 백
-  RCB: [75, 40], // 중앙 수비 우
-  LCB: [75, 60], // 중앙 수비 좌
-  LB: [75, 90], // 레프트 백
-
-  // 3선 (미드필더 수비형: Y=50%)
-  RCM: [50, 20], // 중앙 미드필더 우
-  CDM: [50, 50], // 수비형 미드필더
-  LCM: [50, 80], // 중앙 미드필더 좌
-
-  // 3톱 (공격 라인: Y=25%)
-  RW: [25, 15], // 라이트 윙
-  ST: [25, 50], // 스트라이커
-  LW: [25, 85], // 레프트 윙
-};
-
-// 💡 임시 선수 데이터 (나중에 실제 players 상태로 대체해야 합니다)
-const DEFAULT_PLAYERS = [
-  { name: 'S. K.', position: 'GK', backNumber: 1, posKey: 'GK' },
-  { name: 'C. M.', position: 'RB', backNumber: 2, posKey: 'RB' },
-  { name: 'K. Y.', position: 'RCB', backNumber: 4, posKey: 'RCB' },
-  { name: 'J. H.', position: 'LCB', backNumber: 19, posKey: 'LCB' },
-  { name: 'K. T.', position: 'LB', backNumber: 3, posKey: 'LB' },
-  { name: 'J. S.', position: 'RCM', backNumber: 8, posKey: 'RCM' },
-  { name: 'H. B.', position: 'CDM', backNumber: 6, posKey: 'CDM' },
-  { name: 'W. Y.', position: 'LCM', backNumber: 15, posKey: 'LCM' },
-  { name: 'J. L.', position: 'RW', backNumber: 11, posKey: 'RW' },
-  { name: 'H. M.', position: 'ST', backNumber: 9, posKey: 'ST' },
-  { name: 'S. M.', position: 'LW', backNumber: 7, posKey: 'LW' },
-];
+import { SLOT_ZONES_BOUNDS, findZoneKeyByCoordinates, POSITIONS, DEFAULT_PLAYERS } from '../utils/formationConstants';
 
 const FormationPage = ({ teamId }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 🔑 [추가] 현재 포메이션 상태 (선수 위치 관리를 위함)
+  // 현재 포메이션 상태 (선수 위치 관리를 위함)
   const [currentFormation, setCurrentFormation] = useState(() => {
     // DEFAULT_PLAYERS에 고유 ID를 부여하고, POSITIONS와 결합하여 초기 상태 설정
     return DEFAULT_PLAYERS.map((player, index) => {
@@ -66,80 +30,136 @@ const FormationPage = ({ teamId }) => {
   const draggingIdRef = useRef(null);
   const startPositionRef = useRef(null);
   const [pitchRef, setPitchRef] = useState(null); // 축구장 DOM 요소를 참조
+  const formationRef = useRef(currentFormation); // 🔑 [추가] 핸들러에서 최신 포메이션을 참조하기 위한 ref
 
+  // 💡 포메이션이 변경될 때마다 ref를 업데이트합니다.
+  useEffect(() => {
+    formationRef.current = currentFormation;
+  }, [currentFormation]);
+
+  // 💡 [핵심] 마우스 이동 감지 핸들러
   // 💡 [핵심] 마우스 이동 감지 핸들러
   const handleMouseMove = useCallback(
     (e) => {
-      // 🔑 [필수] 브라우저의 기본 동작 (스크롤, 이미지 드래그 등)을 막습니다.
-      e.preventDefault();
+      if (e.type === 'mousemove') {
+        e.preventDefault();
+      }
       const currentDraggingId = draggingIdRef.current;
+      // 🔑 [추가] 드래그 중인 선수 정보 확인
+      const draggedPlayer = formationRef.current.find((p) => p.id === currentDraggingId);
+      const isGK = draggedPlayer && draggedPlayer.position === 'GK';
+
       if (!currentDraggingId || !pitchRef) return;
 
-      // 🚨 디버깅용 로그 추가
-      console.log('🔄 Dragging...');
-
       const isTouch = e.type.startsWith('touch');
-
       if (isTouch && e.touches.length === 0) return;
 
       // 터치 이벤트(touchmove)인 경우 e.touches[0]에서 좌표를 가져옵니다.
       const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
       const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
 
-      // 1. 축구장 영역의 위치 및 크기 계산
       const rect = pitchRef.getBoundingClientRect();
 
-      const MIN_X = 8;
-      const MAX_X = 92;
+      //  [핵심 수정] 구역 경계 대신, 축구장 전체를 기준으로 좌표를 계산합니다.
+      // 픽셀 좌표를 백분율(%)로 변환합니다.
+      const rawX = ((clientX - rect.left) / rect.width) * 100;
+      const rawY = ((clientY - rect.top) / rect.height) * 100;
 
-      const MIN_Y = 8;
-      const MAX_Y = 85;
+      // 🔑 [핵심 수정] 아이콘의 실제 픽셀 높이를 기반으로 Y 좌표 제한
+      // PlayerIcon의 w-16 h-16은 4rem x 4rem (64px x 64px) 입니다.
+      // 포지션 텍스트가 위로 튀어나온 부분을 고려하여 상단 여백을 계산합니다.
+      const ICON_HEIGHT_PX = 64; // 아이콘의 기본 높이 (h-16)
+      const POSITION_TEXT_OFFSET_PX = 12; // 포지션 텍스트의 상단 오프셋 (top-3)
 
-      // 2. 축구장 내부에서의 마우스 상대 좌표 (픽셀)
-      const mouseX = clientX - rect.left;
-      const mouseY = clientY - rect.top;
+      // 아이콘의 실제 높이 절반(중심점부터 가장자리까지)을 경기장 높이에 대한 백분율로 변환
+      const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
+      const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
+      // ⚽️ [핵심 수정] 가로 너비도 픽셀 기반으로 동적 계산
+      const ICON_WIDTH_PX = 64; // 아이콘의 기본 너비 (w-16)
+      const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
 
-      // 3. 픽셀 좌표를 백분율(%)로 변환 (MIN_X, MIN_Y ~ MAX_X, MAX_Y 범위로 제한)
-      let newX = Math.max(MIN_X, Math.min(MAX_X, (mouseX / rect.width) * 100));
-      let newY = Math.max(MIN_Y, Math.min(MAX_Y, (mouseY / rect.height) * 100));
+      // ⚽️ [핵심 수정] GK가 아니면 하단 이동 범위를 GK 영역 위쪽으로 제한합니다.
+      const maxY = isGK ? 100 - iconBottomMarginPercent : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
 
-      // 4. 상태 업데이트
+      // 아이콘이 경기장 밖으로 나가지 않도록 좌표를 제한합니다.
+      const newX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, rawX));
+      // ⚽️ [핵심 변경] 픽셀 기반으로 계산된 여백을 사용하여 Y 좌표를 제한합니다.
+      const newY = Math.max(iconTopMarginPercent, Math.min(maxY, rawY));
+
+      const currentZone = findZoneKeyByCoordinates(newX, newY);
+      console.log(
+        `[ID ${currentDraggingId} 이동] Current Zone: ${currentZone} (X: ${newX.toFixed(1)}, Y: ${newY.toFixed(1)})`
+      );
+
       setCurrentFormation((prevFormation) =>
         prevFormation.map((player) => (player.id === currentDraggingId ? { ...player, x: newX, y: newY } : player))
       );
     },
-    [draggingIdRef, pitchRef]
+    [draggingIdRef, pitchRef, formationRef] // 🔑 formationRef 의존성 추가
   );
-
   // 💡 [추가] 선수 위치 교환 로직
   const handlePlayerSwap = useCallback(
-    (draggedPlayerId, targetPlayerId, draggedPlayerInitialPos) => {
+    (draggedPlayerId, targetPlayerId, targetPosKey, originalPosKey, draggedPlayerInitialPos) => {
       setCurrentFormation((prevFormation) => {
-        // 1. 타겟 선수의 현재 정보를 찾습니다.
+        // 1. 타겟 선수의 현재 정보와 드래그된 선수의 현재 위치를 찾습니다.
+        const draggedPlayer = prevFormation.find((p) => p.id === draggedPlayerId);
         const targetPlayer = prevFormation.find((p) => p.id === targetPlayerId);
 
-        if (!targetPlayer || !draggedPlayerInitialPos) {
-          return prevFormation; // 예외 처리
+        // 🚨 [핵심 안전성 체크] targetPlayer의 위치가 유효하지 않으면 교환 중단
+        // targetPlayer가 존재하지 않거나, x 또는 y가 숫자가 아니면 중단합니다.
+        if (
+          !draggedPlayer ||
+          !targetPlayer ||
+          !targetPosKey ||
+          !originalPosKey ||
+          !draggedPlayerInitialPos ||
+          typeof targetPlayer.x !== 'number' || // 🔑 [핵심] 유효성 검사
+          typeof targetPlayer.y !== 'number' // 🔑 [핵심] 유효성 검사
+        ) {
+          // console.error("❌ Invalid swap data. Aborting."); // 디버깅 용
+          return prevFormation;
         }
 
-        // 2. 두 선수의 x, y 좌표를 교환합니다.
+        // 2. 새로운 포메이션 배열 생성
         const newFormation = prevFormation.map((player) => {
           if (player.id === draggedPlayerId) {
-            // 드래그된 선수는 타겟 선수의 위치를 갖습니다.
-            return { ...player, x: targetPlayer.x, y: targetPlayer.y };
+            // 🔑 [핵심] 드래그된 선수:
+            // - 위치: 타겟 선수의 현재 위치
+            // - 포지션: 타겟 구역의 포지션 키(targetPosKey)
+            return {
+              ...player,
+              x: targetPlayer.x,
+              y: targetPlayer.y,
+              position: targetPosKey, // 🚨 포지션 최신화
+              posKey: targetPosKey, // 🚨 posKey 최신화
+            };
           }
+
           if (player.id === targetPlayerId) {
-            // 타겟 선수는 드래그된 선수의 위치를 갖습니다.
-            return { ...player, x: draggedPlayerInitialPos.x, y: draggedPlayerInitialPos.y };
+            // 🔑 [핵심] 타겟 선수:
+            // - 위치: 드래그된 선수의 시작 위치 (기존 위치)
+            // - 포지션: 드래그된 선수의 원래 구역 포지션 키(originalPosKey)
+
+            // 🚨 POSITIONS에서 originalPosKey의 중심 좌표를 가져와야 합니다.
+            const origZone = SLOT_ZONES_BOUNDS[originalPosKey];
+
+            if (!origZone) return player; // 안전 장치
+
+            return {
+              ...player,
+              x: draggedPlayerInitialPos.x, // 🔑 [핵심] 시작 시점의 X 좌표
+              y: draggedPlayerInitialPos.y, // 🔑 [핵심] 시작 시점의 Y 좌표
+              position: originalPosKey,
+              posKey: originalPosKey,
+            };
           }
+          //console.log(`✨ Player Swap: ID ${draggedPlayerId} <=> ID ${targetPlayerId}`);
           return player;
         });
-
-        console.log(`✨ Player Swap: ID ${draggedPlayerId} <=> ID ${targetPlayerId}`);
         return newFormation;
       });
     },
-    [] // 이 함수는 상태 업데이트 함수를 호출하므로 의존성이 필요 없습니다.
+    [] // POSITIONS 상수를 참조하므로 의존성 추가
   );
 
   // 💡 [핵심] 드래그 시작 핸들러
@@ -150,17 +170,9 @@ const FormationPage = ({ teamId }) => {
       // 골키퍼(GK)는 드래그를 시작할 수 없도록 막습니다.
       if (playerToDrag && playerToDrag.position === 'GK') {
         // 골키퍼는 여기서 드래그 시작 로직을 종료합니다.
-        console.log('⛔️ GK는 드래그하여 위치를 옮길 수 없습니다.');
+        //console.log('⛔️ GK는 드래그하여 위치를 옮길 수 없습니다.');
         return;
       }
-
-      if (e.type === 'mousedown') {
-        e.preventDefault();
-      }
-      // 🔑 [핵심 수정] 터치 이벤트의 기본 스크롤 동작을 막습니다.
-      console.log('✅ DRAG START - Player ID:', id);
-
-      // 🔑 [추가] 드래그 시작 선수의 현재 위치 저장
 
       if (playerToDrag) {
         startPositionRef.current = { x: playerToDrag.x, y: playerToDrag.y };
@@ -182,16 +194,42 @@ const FormationPage = ({ teamId }) => {
         const clientX = event.type.startsWith('touch') ? event.changedTouches[0].clientX : event.clientX;
         const clientY = event.type.startsWith('touch') ? event.changedTouches[0].clientY : event.clientY;
 
+        // 🔑 [추가] 드롭 시점의 선수 정보 확인
+        const droppedPlayer = formationRef.current.find((p) => p.id === finalDraggingId);
+        const isDroppedPlayerGK = droppedPlayer && droppedPlayer.position === 'GK';
+
         const rect = pitchRef.getBoundingClientRect();
-        const dropX = ((clientX - rect.left) / rect.width) * 100;
-        const dropY = ((clientY - rect.top) / rect.height) * 100;
+        let dropX = ((clientX - rect.left) / rect.width) * 100;
+        let dropY = ((clientY - rect.top) / rect.height) * 100;
+
+        // 🔑 [핵심 수정] 드롭 좌표를 경기장 경계 안으로 제한합니다.
+        const ICON_HEIGHT_PX = 64;
+        const POSITION_TEXT_OFFSET_PX = 12;
+        const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
+        const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
+        const ICON_WIDTH_PX = 64;
+        const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
+
+        // ⚽️ [핵심 수정] 드롭 좌표도 GK 영역 밖으로 제한
+        const dropMaxY = isDroppedPlayerGK
+          ? 100 - iconBottomMarginPercent
+          : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
+
+        dropX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, dropX));
+        dropY = Math.max(iconTopMarginPercent, Math.min(dropMaxY, dropY));
+
+        // 2. 드롭된 좌표가 속한 구역 키 찾기
+        const targetPosKey = findZoneKeyByCoordinates(dropX, dropY);
+        console.log(
+          `[ID ${finalDraggingId} 드롭] Drop Zone: ${targetPosKey} (X: ${dropX.toFixed(1)}, Y: ${dropY.toFixed(1)})`
+        );
 
         // 🔑 [추가] 2. 타겟 선수 찾기 (드롭 위치가 다른 선수 아이콘 근처인지 확인)
         // (선수 아이콘 크기가 5% x 5%라고 가정하고 충돌 판정)
         const TARGET_AREA_THRESHOLD = 5; // % 단위, 아이콘 크기
         const targetPlayer = currentFormation.find((player) => {
-          // 드래그된 선수는 제외
-          if (player.id === finalDraggingId) return false;
+          if (player.id === finalDraggingId) return false; // 자기 자신 제외
+          if (player.position === 'GK') return false; // GK는 교환 대상에서 제외
 
           // 드롭 좌표와 타겟 선수 좌표 간의 거리가 임계값 이내인지 확인
           const dx = Math.abs(player.x - dropX);
@@ -200,23 +238,49 @@ const FormationPage = ({ teamId }) => {
           return dx < TARGET_AREA_THRESHOLD && dy < TARGET_AREA_THRESHOLD;
         });
 
-        // 🔑 [핵심 수정] 3. 분리된 조건문 로직 적용
-        if (targetPlayer && targetPlayer.position === 'GK' && initialPosition) {
-          // Case 1: 타겟이 GK일 경우 -> 드래그 시작 위치로 복귀
+        // 🔑 4. 원래 구역 키 찾기 (교환 로직에서 필요)
+        const originalPosKey = initialPosition ? findZoneKeyByCoordinates(initialPosition.x, initialPosition.y) : null;
+
+        // 🔑 [핵심 로직 분기] 요청하신 세 가지 규칙 적용
+        if (targetPlayer && targetPosKey && originalPosKey) {
+          // Case 1: 구역에 선수가 있고 겹쳤으면 스왑
+          handlePlayerSwap(finalDraggingId, targetPlayer.id, targetPosKey, originalPosKey, initialPosition);
+          console.log(`✨ 선수 교환 (아이콘 겹침): ${originalPosKey} ↔️ ${targetPosKey}`);
+        } else if (targetPosKey) {
+          // 🔑 [핵심 수정] Case 2: 드롭한 구역이 비어있는지 확인
+          const occupyingPlayer = currentFormation.find((p) => p.posKey === targetPosKey && p.id !== finalDraggingId);
+
+          if (occupyingPlayer && occupyingPlayer.position !== 'GK') {
+            // 2-1. 🔑 [핵심 변경] 구역이 점유되었고, GK가 아니면 스왑
+            handlePlayerSwap(finalDraggingId, occupyingPlayer.id, targetPosKey, originalPosKey, initialPosition);
+            console.log(`✨ 선수 교환 (빈 구역 드롭): ${originalPosKey} ↔️ ${targetPosKey}`);
+          } else if (!occupyingPlayer) {
+            // 2-2. 빈 구역임 -> 위치와 포지션 업데이트
+            setCurrentFormation((prevFormation) =>
+              prevFormation.map((player) =>
+                player.id === finalDraggingId
+                  ? { ...player, x: dropX, y: dropY, position: targetPosKey, posKey: targetPosKey }
+                  : player
+              )
+            );
+            console.log(`✅ 빈 구역 ${targetPosKey}으로 이동.`);
+          } else {
+            // 2-3. GK가 있는 구역이거나 다른 이유로 이동 불가 -> 원래 위치로 복귀
+            setCurrentFormation((prevFormation) =>
+              prevFormation.map((player) =>
+                player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
+              )
+            );
+            console.log(`❌ ${targetPosKey} 구역으로 이동할 수 없습니다. 원래 위치로 복귀.`);
+          }
+        } else {
+          // Case 3: 🔑 [핵심 수정] 구역 밖에서 드롭한 경우 -> 원래 위치로 복귀
           setCurrentFormation((prevFormation) =>
             prevFormation.map((player) =>
               player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
             )
           );
-          console.log('⛔️ GK 위치에 드롭하여 시작 위치로 복귀됨.');
-        } else if (targetPlayer && initialPosition) {
-          // Case 2: 타겟이 필드 선수일 경우 -> 위치 교환
-          // 타겟 선수가 존재하고, GK가 아닐 경우 (position !== 'GK'), 교환 로직 실행
-          handlePlayerSwap(finalDraggingId, targetPlayer.id, initialPosition);
-          console.log('✨ 선수 교환 완료.');
-        } else {
-          // Case 3: 타겟이 없을 경우 -> 드롭 위치에 그대로 배치 (기존 로직 유지)
-          console.log('드롭 위치에 다른 선수가 없어 드래그된 위치에 배치됨.');
+          //console.log('❌ 구역 밖 드롭. 원래 위치로 복귀.');
         }
 
         // 등록된 리스너를 정확히 제거 (클로저를 활용)
@@ -262,7 +326,29 @@ const FormationPage = ({ teamId }) => {
   // 💡 버튼 클릭 핸들러 (기능은 콘솔 로그로 대체)
   const handleReset = () => {
     console.log('포메이션 초기화 기능 실행');
+    // 현재 포메이션 상태 (선수 위치 관리를 위함)
+    const isConfirmed = window.confirm(
+      '정말로 현재 포메이션을 초기 상태로 되돌리시겠습니까? 저장되지 않은 변경 사항은 손실됩니다.'
+    );
+
+    if (!isConfirmed) {
+      console.log('포메이션 초기화가 취소되었습니다.');
+      return; // 사용자가 '취소'를 누르면 여기서 함수 종료
+    }
+    setCurrentFormation(() => {
+      // DEFAULT_PLAYERS에 고유 ID를 부여하고, POSITIONS와 결합하여 초기 상태 설정
+      return DEFAULT_PLAYERS.map((player, index) => {
+        const [y, x] = POSITIONS[player.posKey];
+        return {
+          ...player,
+          id: index + 1, // 고유 ID 부여
+          x: x, // 초기 X 좌표 (%)
+          y: y, // 초기 Y 좌표 (%)
+        };
+      });
+    });
   };
+
   const handleLoad = () => {
     console.log('포메이션 불러오기 기능 실행');
   };
