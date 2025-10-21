@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
-import { Briefcase, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 const TeamPage = () => {
   const api = useApiClient();
@@ -60,10 +60,6 @@ const TeamPage = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-3xl font-bold flex items-center mb-6 text-gray-800">
-        <Briefcase className="mr-2" /> 팀 관리
-      </h2>
-
       {/* 팀 생성 폼 */}
       <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-6 p-4 border rounded-lg shadow-sm">
         <input

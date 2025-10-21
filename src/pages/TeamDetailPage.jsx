@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Briefcase, Users, Grid, ArrowLeft } from 'lucide-react';
+import { Briefcase, Users, Grid, ArrowLeft, Shield } from 'lucide-react';
 // import { useApiClient } from '../api/ApiClient'; // API 연동 시 주석 해제
 
 const TeamDetailPage = ({ teamId }) => {
@@ -39,20 +39,14 @@ const TeamDetailPage = ({ teamId }) => {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      <Link to="/teams" className="inline-flex items-center text-gray-500 hover:text-indigo-600 mb-4">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        모든 팀 목록으로 돌아가기
-      </Link>
       <h2 className="text-4xl font-extrabold mb-2 text-indigo-700 flex items-center">
-        <Briefcase className="w-8 h-8 mr-3" /> {team.name}
+        <Shield className="w-8 h-8 mr-3" /> {team.name}
       </h2>
       <p className="text-gray-500 mb-10">
         팀 ID: {team.teamId} | 소유자: {team.ownerEmail}
       </p>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      <p className="text-gray-600 mb-10 text-lg">팀 '**{team.name}**'을(를) 관리할 기능을 선택하세요.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 1. 팀 선수 관리 버튼 */}
@@ -69,6 +63,7 @@ const TeamDetailPage = ({ teamId }) => {
         {/* 2. 포메이션 관리 버튼 */}
         <Link
           to={`/teams/${teamId}/formation`}
+          state={{ team: team }} // 팀 정보를 state로 전달
           className="p-6 bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
         >
           <Grid className="w-10 h-10 text-green-500 mb-3" />

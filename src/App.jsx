@@ -9,7 +9,8 @@ import TeamPage from './pages/TeamPage'; // 분리된 페이지 임포트
 import TeamDetailPage from './pages/TeamDetailPage'; // 새로운 컴포넌트 임포트
 import PlayerListPage from './pages/PlayerListPage'; // 새로운 컴포넌트 임포트
 import ProfilePage from './pages/ProfilePage';
-import { User, LogIn, Briefcase, LogOut } from 'lucide-react';
+import FormationPage from './pages/FormationPage';
+import { User, Briefcase, Shield } from 'lucide-react';
 
 // =================================================================================
 // Router & Nav Component (App.jsx에 유지)
@@ -42,6 +43,11 @@ const PlayerListWrapper = () => {
   return <PlayerListPage teamId={teamId} />;
 };
 
+const FormationWrapper = () => {
+  const { teamId } = useParams(); // URL에서 teamId 추출
+  return <FormationPage teamId={teamId} />;
+};
+
 /**
  * 인증 상태에 따라 로그인 페이지 또는 팀 페이지로 리다이렉트하는 컴포넌트입니다.
  */
@@ -51,11 +57,32 @@ const AuthRedirect = () => {
 };
 
 const Header = () => {
+  const location = useLocation();
+
+  // 현재 경로를 기반으로 제목 결정
+  let pageTitle = 'LineupMaker';
+
+  if (location.pathname.startsWith('/teams')) {
+    // 팀 상세 경로는 제외 (하위 컴포넌트가 처리해야 함)
+    if (location.pathname === '/teams') {
+      pageTitle = '팀 관리';
+    } else if (location.pathname.includes('/players')) {
+      pageTitle = '선수 관리'; // 팀 이름은 FormationPage/PlayerListPage에서 직접 표시하는 것이 일반적
+    } else if (location.pathname.includes('/formation')) {
+      pageTitle = '포메이션 관리';
+    }
+  } else if (location.pathname === '/profile') {
+    pageTitle = '내 정보';
+  } else if (location.pathname === '/') {
+    pageTitle = '로그인';
+  }
+
   return (
     <nav className="bg-gray-800 sticky top-0 z-10">
       <div className="max-w-sm mx-auto px-4 bg-gray-800 shadow-lg rounded-md">
         <div className="flex justify-between items-center py-4">
-          <div className="text-white font-extrabold text-xl tracking-wider">LineupMaker</div>
+          {/* 🔑 제목 영역에 조건부 텍스트 삽입 */}
+          <div className="text-white font-extrabold text-xl tracking-wider">{pageTitle}</div>
         </div>
       </div>
     </nav>
@@ -72,8 +99,12 @@ const FooterNav = () => {
   // 💡 location.pathname 또는 location.hash를 사용하여 현재 경로를 확인
   const currentPath = location.pathname; // 예: /teams, /profile
 
-  // 비인증 상태에서는 FooterNav를 표시하지 않습니다.
-  if (!auth.isAuthenticated) return null;
+  const isHiddenPath = location.pathname.includes('/formation');
+
+  // 비인증 상태이거나 숨김 경로일 때는 null 반환
+  if (!auth.isAuthenticated || isHiddenPath) {
+    return null; // 🔑 특정 경로일 때 렌더링하지 않음
+  }
 
   // 모바일 앱 하단 탭 바 스타일
   return (
@@ -85,7 +116,7 @@ const FooterNav = () => {
           className={`flex flex-col items-center justify-center p-2 text-xs font-medium transition duration-150 
             ${currentPath.startsWith('/teams') ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <Briefcase className="w-6 h-6 mb-1" />팀 관리
+          <Shield className="w-6 h-6 mb-1" />팀 관리
         </Link>
 
         {/* 2. 내 정보 (ProfilePage) 버튼 */}
@@ -101,55 +132,80 @@ const FooterNav = () => {
   );
 };
 
+const AppContent = () => {
+  // 🔑 새로운 컴포넌트 생성
+  const location = useLocation(); // 🔑 useLocation을 이제 안전하게 호출
+  const isFormationPage = location.pathname.includes('/formation');
+
+  // FooterNav 패딩 클래스 계산
+  const paddingClass = isFormationPage ? 'pb-4' : 'pb-16';
+
+  const mainClasses = isFormationPage ? 'mx-auto py-2' : 'max-w-sm mx-auto py-6 px-4';
+
+  return (
+    // 🔑 기존 App 컴포넌트의 모든 내부 JSX 반환
+    <div className={`min-h-screen bg-gray-50 ${paddingClass}`}>
+      <Header />
+
+      <main className={mainClasses}>
+        <Routes>
+          {/* ... 기존 Routes 유지 ... */}
+          <Route path="/" element={<AuthRedirect />} />
+          <Route
+            path="/teams"
+            element={
+              <ProtectedRoute>
+                <TeamPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/:teamId"
+            element={
+              <ProtectedRoute>
+                <TeamDetailWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/:teamId/players"
+            element={
+              <ProtectedRoute>
+                <PlayerListWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/:teamId/formation"
+            element={
+              <ProtectedRoute>
+                <FormationWrapper />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/teams" replace />} />
+        </Routes>
+      </main>
+
+      <FooterNav />
+    </div>
+  );
+};
+
 const App = () => (
-  <div style={{ fontFamily: 'Inter, sans-serif' }} className="min-h-screen bg-gray-50">
+  <div style={{ fontFamily: 'Inter, sans-serif' }}>
+    {/* 🔑 useLocation이 내부의 AppContent에서 호출되도록 <HashRouter>를 가장 바깥쪽에 배치 */}
     <HashRouter>
       <AuthProvider>
-        <Header />
-        <main className="max-w-sm mx-auto py-6 px-4">
-          <Routes>
-            {/* 1. 루트 경로: 인증 상태에 따라 로그인 또는 팀 목록으로 자동 이동 */}
-            <Route path="/" element={<AuthRedirect />} />
-
-            {/* 2. 보호된 경로들: 인증된 사용자만 접근 가능 */}
-            <Route
-              path="/teams"
-              element={
-                <ProtectedRoute>
-                  <TeamPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId"
-              element={
-                <ProtectedRoute>
-                  <TeamDetailWrapper />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId/players" // <--- 팀 ID 하위의 /players 경로
-              element={
-                <ProtectedRoute>
-                  <PlayerListWrapper />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* 3. 일치하는 경로가 없을 때: 팀 목록 페이지로 이동 */}
-            <Route path="*" element={<Navigate to="/teams" replace />} />
-          </Routes>
-        </main>
-        <FooterNav />
+        <AppContent /> {/* 🔑 AppContent를 렌더링 */}
       </AuthProvider>
     </HashRouter>
   </div>
