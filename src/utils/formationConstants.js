@@ -7,13 +7,13 @@ export const SLOT_ZONES_BOUNDS = {
   GK: { minX: 40, maxX: 60, minY: 87, maxY: 100, centerX: 50, centerY: 92 }, // Goalkeeper
 
   // Defensive Zone
-  LWB: { minX: 8, maxX: 24, minY: 60, maxY: 73, centerX: 16, centerY: 66 }, // Left Wing Back
-  LB: { minX: 8, maxX: 24, minY: 73, maxY: 85, centerX: 16, centerY: 79 }, // Left Back
+  LWB: { minX: 7, maxX: 24, minY: 60, maxY: 73, centerX: 16, centerY: 66 }, // Left Wing Back
+  LB: { minX: 7, maxX: 24, minY: 73, maxY: 85, centerX: 16, centerY: 79 }, // Left Back
   LCB: { minX: 24, maxX: 40, minY: 71, maxY: 85, centerX: 32, centerY: 78 }, // Left Center Back
   CB: { minX: 40, maxX: 60, minY: 71, maxY: 85, centerX: 50, centerY: 78 }, // Center Back
   RCB: { minX: 60, maxX: 76, minY: 71, maxY: 85, centerX: 68, centerY: 78 }, // Right Center Back
-  RB: { minX: 76, maxX: 92, minY: 73, maxY: 85, centerX: 84, centerY: 79 }, // Right Back
-  RWB: { minX: 76, maxX: 92, minY: 60, maxY: 73, centerX: 84, centerY: 66 }, // Right Wing Back
+  RB: { minX: 76, maxX: 93, minY: 73, maxY: 85, centerX: 84, centerY: 79 }, // Right Back
+  RWB: { minX: 76, maxX: 93, minY: 60, maxY: 73, centerX: 84, centerY: 66 }, // Right Wing Back
 
   // Midfield Zone
   LDM: { minX: 24, maxX: 40, minY: 57, maxY: 71, centerX: 32, centerY: 64 }, // Left Defensive Mid
@@ -28,15 +28,15 @@ export const SLOT_ZONES_BOUNDS = {
   CAM: { minX: 40, maxX: 60, minY: 29, maxY: 43, centerX: 50, centerY: 36 }, // Central Attacking Mid
   RAM: { minX: 60, maxX: 76, minY: 29, maxY: 43, centerX: 68, centerY: 36 }, // Right Attacking Mid
 
-  LM: { minX: 8, maxX: 24, minY: 30, maxY: 60, centerX: 16, centerY: 45 }, // Left Mid
-  RM: { minX: 76, maxX: 92, minY: 30, maxY: 60, centerX: 84, centerY: 45 }, // Right Mid
+  LM: { minX: 7, maxX: 24, minY: 30, maxY: 60, centerX: 16, centerY: 45 }, // Left Mid
+  RM: { minX: 76, maxX: 93, minY: 30, maxY: 60, centerX: 84, centerY: 45 }, // Right Mid
 
   // Forward Zone
-  LW: { minX: 8, maxX: 24, minY: 0, maxY: 30, centerX: 16, centerY: 15 }, // Left Wing
+  LW: { minX: 7, maxX: 24, minY: 0, maxY: 30, centerX: 16, centerY: 15 }, // Left Wing
   LS: { minX: 24, maxX: 40, minY: 0, maxY: 15, centerX: 32, centerY: 7 }, // Left Striker
   ST: { minX: 40, maxX: 60, minY: 0, maxY: 15, centerX: 50, centerY: 9 }, // Striker
   RS: { minX: 60, maxX: 76, minY: 0, maxY: 15, centerX: 68, centerY: 7 }, // Right Striker
-  RW: { minX: 76, maxX: 92, minY: 0, maxY: 30, centerX: 84, centerY: 15 }, // Right Wing
+  RW: { minX: 76, maxX: 93, minY: 0, maxY: 30, centerX: 84, centerY: 15 }, // Right Wing
 
   LF: { minX: 24, maxX: 40, minY: 15, maxY: 29, centerX: 32, centerY: 22 }, // Left Forward
   CF: { minX: 40, maxX: 60, minY: 15, maxY: 29, centerX: 50, centerY: 22 }, // Center Forward

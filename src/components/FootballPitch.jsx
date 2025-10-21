@@ -23,10 +23,11 @@ const FootballPitch = forwardRef(({ children }, ref) => {
   return (
     <div
       ref={ref}
-      className="relative w-full aspect-[2/3] border-8 border-white rounded-md shadow-lg overflow-hidden mx-auto"
+      className="relative w-full aspect-[2/3] border-8 border-white rounded-md shadow-lg overflow-auto mx-auto"
       style={{
         backgroundImage: grassGradient, // 🔑 수정된 그라데이션 적용
         backgroundSize: '100% 100%',
+        touchAction: 'pan-y', // ⚽️ 모바일에서 피치 배경 스크롤 허용
       }}
     >
       {/* 🔑 [수정] 중앙 서클 크기: w-28 h-28로 확대 (이전에 적용된 최종 크기 유지) */}

@@ -4,12 +4,15 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FootballPitch from '../components/FootballPitch'; // 🔑 축구장 컴포넌트 임포트
 import PlayerIcon from '../components/PlayerIcon';
+import PlayerListPanel from '../components/PlayerListPanel'; // 🔑 선수 목록 패널 컴포넌트 임포트
 import { Shield, RotateCcw, List, Save } from 'lucide-react'; // Trash2, Edit 아이콘 추가
+import { useApiClient } from '../api/ApiClient'; // 🔑 API 클라이언트 임포트
 import { SLOT_ZONES_BOUNDS, findZoneKeyByCoordinates, POSITIONS, DEFAULT_PLAYERS } from '../utils/formationConstants';
 
 const FormationPage = ({ teamId }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const api = useApiClient(); // 🔑 API 클라이언트 사용
 
   // 현재 포메이션 상태 (선수 위치 관리를 위함)
   const [currentFormation, setCurrentFormation] = useState(() => {
@@ -32,71 +35,35 @@ const FormationPage = ({ teamId }) => {
   const [pitchRef, setPitchRef] = useState(null); // 축구장 DOM 요소를 참조
   const formationRef = useRef(currentFormation); // 🔑 [추가] 핸들러에서 최신 포메이션을 참조하기 위한 ref
 
+  // 🔑 [추가] 팀의 전체 선수 목록 상태
+  const [teamPlayers, setTeamPlayers] = useState([]);
+  const [playersLoading, setPlayersLoading] = useState(true);
+  // const [playersError, setPlayersError] = useState(''); // Removed unused state
+
   // 💡 포메이션이 변경될 때마다 ref를 업데이트합니다.
   useEffect(() => {
     formationRef.current = currentFormation;
   }, [currentFormation]);
 
-  // 💡 [핵심] 마우스 이동 감지 핸들러
-  // 💡 [핵심] 마우스 이동 감지 핸들러
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (e.type === 'mousemove') {
-        e.preventDefault();
+  // 🔑 [추가] 컴포넌트 마운트 시 팀 선수 목록을 불러옵니다.
+  useEffect(() => {
+    const fetchTeamPlayers = async () => {
+      if (!teamId) return;
+      setPlayersLoading(true);
+      try {
+        const res = await api.getTeamPlayers(teamId);
+        // PlayerListPanel에서 player.id를 key로 사용하므로, playerId를 id로 매핑해줍니다.
+        const playersWithId = res.data.map((p) => ({ ...p, id: p.playerId }));
+        setTeamPlayers(playersWithId);
+      } catch (err) {
+        console.error(err.response?.data?.message || '선수 목록을 불러오는 데 실패했습니다.');
+      } finally {
+        setPlayersLoading(false);
       }
-      const currentDraggingId = draggingIdRef.current;
-      // 🔑 [추가] 드래그 중인 선수 정보 확인
-      const draggedPlayer = formationRef.current.find((p) => p.id === currentDraggingId);
-      const isGK = draggedPlayer && draggedPlayer.position === 'GK';
+    };
+    fetchTeamPlayers();
+  }, [api, teamId]);
 
-      if (!currentDraggingId || !pitchRef) return;
-
-      const isTouch = e.type.startsWith('touch');
-      if (isTouch && e.touches.length === 0) return;
-
-      // 터치 이벤트(touchmove)인 경우 e.touches[0]에서 좌표를 가져옵니다.
-      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-
-      const rect = pitchRef.getBoundingClientRect();
-
-      //  [핵심 수정] 구역 경계 대신, 축구장 전체를 기준으로 좌표를 계산합니다.
-      // 픽셀 좌표를 백분율(%)로 변환합니다.
-      const rawX = ((clientX - rect.left) / rect.width) * 100;
-      const rawY = ((clientY - rect.top) / rect.height) * 100;
-
-      // 🔑 [핵심 수정] 아이콘의 실제 픽셀 높이를 기반으로 Y 좌표 제한
-      // PlayerIcon의 w-16 h-16은 4rem x 4rem (64px x 64px) 입니다.
-      // 포지션 텍스트가 위로 튀어나온 부분을 고려하여 상단 여백을 계산합니다.
-      const ICON_HEIGHT_PX = 64; // 아이콘의 기본 높이 (h-16)
-      const POSITION_TEXT_OFFSET_PX = 12; // 포지션 텍스트의 상단 오프셋 (top-3)
-
-      // 아이콘의 실제 높이 절반(중심점부터 가장자리까지)을 경기장 높이에 대한 백분율로 변환
-      const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
-      const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
-      // ⚽️ [핵심 수정] 가로 너비도 픽셀 기반으로 동적 계산
-      const ICON_WIDTH_PX = 64; // 아이콘의 기본 너비 (w-16)
-      const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
-
-      // ⚽️ [핵심 수정] GK가 아니면 하단 이동 범위를 GK 영역 위쪽으로 제한합니다.
-      const maxY = isGK ? 100 - iconBottomMarginPercent : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
-
-      // 아이콘이 경기장 밖으로 나가지 않도록 좌표를 제한합니다.
-      const newX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, rawX));
-      // ⚽️ [핵심 변경] 픽셀 기반으로 계산된 여백을 사용하여 Y 좌표를 제한합니다.
-      const newY = Math.max(iconTopMarginPercent, Math.min(maxY, rawY));
-
-      const currentZone = findZoneKeyByCoordinates(newX, newY);
-      console.log(
-        `[ID ${currentDraggingId} 이동] Current Zone: ${currentZone} (X: ${newX.toFixed(1)}, Y: ${newY.toFixed(1)})`
-      );
-
-      setCurrentFormation((prevFormation) =>
-        prevFormation.map((player) => (player.id === currentDraggingId ? { ...player, x: newX, y: newY } : player))
-      );
-    },
-    [draggingIdRef, pitchRef, formationRef] // 🔑 formationRef 의존성 추가
-  );
   // 💡 [추가] 선수 위치 교환 로직
   const handlePlayerSwap = useCallback(
     (draggedPlayerId, targetPlayerId, targetPosKey, originalPosKey, draggedPlayerInitialPos) => {
@@ -162,6 +129,178 @@ const FormationPage = ({ teamId }) => {
     [] // POSITIONS 상수를 참조하므로 의존성 추가
   );
 
+  // 💡 [핵심] 마우스 이동 감지 핸들러
+  // 💡 [핵심] 마우스 이동 감지 핸들러
+  const handleMouseMove = useCallback(
+    (e) => {
+      const currentDraggingId = draggingIdRef.current;
+      if (!currentDraggingId || !pitchRef) return;
+
+      // 💡 터치가 아닌 일반 스크롤 중엔 preventDefault() 금지
+      const isTouch = e.type.startsWith('touch');
+      if (isTouch && e.cancelable && draggingIdRef.current) {
+        const touch = e.touches[0];
+        const rect = pitchRef?.getBoundingClientRect?.();
+        if (rect && touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          e.preventDefault(); // 오직 경기장 안 터치만 스크롤 방지
+        }
+      }
+
+      // 🔑 [추가] 드래그 중인 선수 정보 확인
+      const draggedPlayer = formationRef.current.find((p) => p.id === currentDraggingId);
+      const isGK = draggedPlayer && draggedPlayer.position === 'GK';
+
+      if (!currentDraggingId || !pitchRef) return;
+
+      // 터치 이벤트(touchmove)인 경우 e.touches[0]에서 좌표를 가져옵니다.
+      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+      const rect = pitchRef.getBoundingClientRect();
+
+      //  [핵심 수정] 구역 경계 대신, 축구장 전체를 기준으로 좌표를 계산합니다.
+      // 픽셀 좌표를 백분율(%)로 변환합니다.
+      const rawX = ((clientX - rect.left) / rect.width) * 100;
+      const rawY = ((clientY - rect.top) / rect.height) * 100;
+
+      // 🔑 [핵심 수정] 아이콘의 실제 픽셀 높이를 기반으로 Y 좌표 제한
+      // PlayerIcon의 w-16 h-16은 4rem x 4rem (64px x 64px) 입니다.
+      // 포지션 텍스트가 위로 튀어나온 부분을 고려하여 상단 여백을 계산합니다.
+      const ICON_HEIGHT_PX = 64; // 아이콘의 기본 높이 (h-16)
+      const POSITION_TEXT_OFFSET_PX = 12; // 포지션 텍스트의 상단 오프셋 (top-3)
+
+      // 아이콘의 실제 높이 절반(중심점부터 가장자리까지)을 경기장 높이에 대한 백분율로 변환
+      const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
+      const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
+      // ⚽️ [핵심 수정] 가로 너비도 픽셀 기반으로 동적 계산
+      const ICON_WIDTH_PX = 64; // 아이콘의 기본 너비 (w-16)
+      const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
+
+      // ⚽️ [핵심 수정] GK가 아니면 하단 이동 범위를 GK 영역 위쪽으로 제한합니다.
+      const maxY = isGK ? 100 - iconBottomMarginPercent : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
+
+      // 아이콘이 경기장 밖으로 나가지 않도록 좌표를 제한합니다.
+      const newX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, rawX));
+      // ⚽️ [핵심 변경] 픽셀 기반으로 계산된 여백을 사용하여 Y 좌표를 제한합니다.
+      const newY = Math.max(iconTopMarginPercent, Math.min(maxY, rawY));
+
+      const currentZone = findZoneKeyByCoordinates(newX, newY);
+      console.log(
+        `[ID ${currentDraggingId} 이동] Current Zone: ${currentZone} (X: ${newX.toFixed(1)}, Y: ${newY.toFixed(1)})`
+      );
+
+      setCurrentFormation((prevFormation) =>
+        prevFormation.map((player) => (player.id === currentDraggingId ? { ...player, x: newX, y: newY } : player))
+      );
+    },
+    [draggingIdRef, pitchRef, formationRef] // 🔑 formationRef 의존성 추가
+  );
+
+  // 💡 [핵심] 마우스 떼기 핸들러 (이 함수 내부에 드롭 로직을 통합해야 합니다)
+  const handleMouseUp = useCallback(
+    (event) => {
+      const finalDraggingId = draggingIdRef.current;
+      const initialPosition = startPositionRef.current;
+
+      // 1. 드래그 종료 상태 업데이트 (가장 먼저)
+      setDraggingId(null);
+      draggingIdRef.current = null;
+      startPositionRef.current = null;
+
+      // 2. [필수] 전역 이벤트 리스너 제거
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('touchend', handleMouseUp);
+
+      if (!finalDraggingId || !initialPosition) return;
+
+      // 🔑 3. 드롭된 좌표 계산 (Mouse/Touch 종료 시점의 좌표)
+      const clientX = event.type.startsWith('touch') ? event.changedTouches[0].clientX : event.clientX;
+      const clientY = event.type.startsWith('touch') ? event.changedTouches[0].clientY : event.clientY;
+
+      const rect = pitchRef.getBoundingClientRect();
+      let dropX = ((clientX - rect.left) / rect.width) * 100;
+      let dropY = ((clientY - rect.top) / rect.height) * 100;
+
+      const droppedPlayer = formationRef.current.find((p) => p.id === finalDraggingId);
+      const isDroppedPlayerGK = droppedPlayer && droppedPlayer.position === 'GK';
+
+      const ICON_HEIGHT_PX = 64;
+      const POSITION_TEXT_OFFSET_PX = 12;
+      const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
+      const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
+      const ICON_WIDTH_PX = 64;
+      const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
+
+      const dropMaxY = isDroppedPlayerGK
+        ? 100 - iconBottomMarginPercent
+        : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
+
+      dropX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, dropX));
+      dropY = Math.max(iconTopMarginPercent, Math.min(dropMaxY, dropY));
+
+      const targetPosKey = findZoneKeyByCoordinates(dropX, dropY);
+      console.log(
+        `[ID ${finalDraggingId} 드롭] Drop Zone: ${targetPosKey} (X: ${dropX.toFixed(1)}, Y: ${dropY.toFixed(1)})`
+      );
+
+      const TARGET_AREA_THRESHOLD = 5;
+      const targetPlayer = currentFormation.find((player) => {
+        if (player.id === finalDraggingId) return false;
+        if (player.position === 'GK') return false;
+        const dx = Math.abs(player.x - dropX);
+        const dy = Math.abs(player.y - dropY);
+        return dx < TARGET_AREA_THRESHOLD && dy < TARGET_AREA_THRESHOLD;
+      });
+
+      const originalPosKey = initialPosition ? findZoneKeyByCoordinates(initialPosition.x, initialPosition.y) : null;
+
+      if (targetPlayer && targetPosKey && originalPosKey) {
+        // Case 1: 스왑 (아이콘 겹침)
+        handlePlayerSwap(finalDraggingId, targetPlayer.id, targetPosKey, originalPosKey, initialPosition);
+      } else if (targetPosKey) {
+        // Case 2: 구역 드롭
+        const occupyingPlayer = currentFormation.find((p) => p.posKey === targetPosKey && p.id !== finalDraggingId);
+
+        if (occupyingPlayer && occupyingPlayer.position !== 'GK') {
+          // 2-1. 구역 점유 시 스왑
+          handlePlayerSwap(finalDraggingId, occupyingPlayer.id, targetPosKey, originalPosKey, initialPosition);
+        } else if (!occupyingPlayer) {
+          // 2-2. 빈 구역 이동
+          setCurrentFormation((prevFormation) =>
+            prevFormation.map((player) =>
+              player.id === finalDraggingId
+                ? { ...player, x: dropX, y: dropY, position: targetPosKey, posKey: targetPosKey }
+                : player
+            )
+          );
+        } else {
+          // 2-3. GK 구역 등 이동 불가 -> 원래 위치 복귀
+          setCurrentFormation((prevFormation) =>
+            prevFormation.map((player) =>
+              player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
+            )
+          );
+        }
+      } else {
+        // Case 3: 구역 밖 드롭 -> 원래 위치 복귀
+        setCurrentFormation((prevFormation) =>
+          prevFormation.map((player) =>
+            player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
+          )
+        );
+      }
+
+      setDraggingId(null);
+      draggingIdRef.current = null; // Ref도 해제해야 합니다.
+      startPositionRef.current = null;
+
+      // ... (removeEventListener 로직 유지) ...
+    },
+    [handleMouseMove, pitchRef, currentFormation, handlePlayerSwap]
+  );
+
   // 💡 [핵심] 드래그 시작 핸들러
   const handleMouseDown = useCallback(
     (e, id) => {
@@ -170,8 +309,11 @@ const FormationPage = ({ teamId }) => {
       // 골키퍼(GK)는 드래그를 시작할 수 없도록 막습니다.
       if (playerToDrag && playerToDrag.position === 'GK') {
         // 골키퍼는 여기서 드래그 시작 로직을 종료합니다.
-        //console.log('⛔️ GK는 드래그하여 위치를 옮길 수 없습니다.');
         return;
+      }
+
+      if (e.type === 'mousedown') {
+        e.preventDefault();
       }
 
       if (playerToDrag) {
@@ -181,124 +323,27 @@ const FormationPage = ({ teamId }) => {
       setDraggingId(id); // 드래그 시작 선수 ID 설정
       draggingIdRef.current = id;
 
-      // 🚨 [핵심 수정] 드래그 중 마우스 떼기 핸들러를 handleMouseDown 내부에서 정의
-      const stopDrag = (event) => {
-        const finalDraggingId = draggingIdRef.current;
-        const initialPosition = startPositionRef.current; // 💡 시작 위치 가져오기
-
-        setDraggingId(null);
-        draggingIdRef.current = null;
-        startPositionRef.current = null; // Ref 초기화
-
-        // 🔑 [추가] 1. 드롭된 좌표 계산 (마우스 떼는 순간의 좌표)
-        const clientX = event.type.startsWith('touch') ? event.changedTouches[0].clientX : event.clientX;
-        const clientY = event.type.startsWith('touch') ? event.changedTouches[0].clientY : event.clientY;
-
-        // 🔑 [추가] 드롭 시점의 선수 정보 확인
-        const droppedPlayer = formationRef.current.find((p) => p.id === finalDraggingId);
-        const isDroppedPlayerGK = droppedPlayer && droppedPlayer.position === 'GK';
-
-        const rect = pitchRef.getBoundingClientRect();
-        let dropX = ((clientX - rect.left) / rect.width) * 100;
-        let dropY = ((clientY - rect.top) / rect.height) * 100;
-
-        // 🔑 [핵심 수정] 드롭 좌표를 경기장 경계 안으로 제한합니다.
-        const ICON_HEIGHT_PX = 64;
-        const POSITION_TEXT_OFFSET_PX = 12;
-        const iconTopMarginPercent = ((ICON_HEIGHT_PX / 2 + POSITION_TEXT_OFFSET_PX) / rect.height) * 100;
-        const iconBottomMarginPercent = (ICON_HEIGHT_PX / 2 / rect.height) * 100;
-        const ICON_WIDTH_PX = 64;
-        const iconHalfWidthPercent = (ICON_WIDTH_PX / 2 / rect.width) * 100;
-
-        // ⚽️ [핵심 수정] 드롭 좌표도 GK 영역 밖으로 제한
-        const dropMaxY = isDroppedPlayerGK
-          ? 100 - iconBottomMarginPercent
-          : SLOT_ZONES_BOUNDS.GK.minY - iconBottomMarginPercent;
-
-        dropX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, dropX));
-        dropY = Math.max(iconTopMarginPercent, Math.min(dropMaxY, dropY));
-
-        // 2. 드롭된 좌표가 속한 구역 키 찾기
-        const targetPosKey = findZoneKeyByCoordinates(dropX, dropY);
-        console.log(
-          `[ID ${finalDraggingId} 드롭] Drop Zone: ${targetPosKey} (X: ${dropX.toFixed(1)}, Y: ${dropY.toFixed(1)})`
-        );
-
-        // 🔑 [추가] 2. 타겟 선수 찾기 (드롭 위치가 다른 선수 아이콘 근처인지 확인)
-        // (선수 아이콘 크기가 5% x 5%라고 가정하고 충돌 판정)
-        const TARGET_AREA_THRESHOLD = 5; // % 단위, 아이콘 크기
-        const targetPlayer = currentFormation.find((player) => {
-          if (player.id === finalDraggingId) return false; // 자기 자신 제외
-          if (player.position === 'GK') return false; // GK는 교환 대상에서 제외
-
-          // 드롭 좌표와 타겟 선수 좌표 간의 거리가 임계값 이내인지 확인
-          const dx = Math.abs(player.x - dropX);
-          const dy = Math.abs(player.y - dropY);
-
-          return dx < TARGET_AREA_THRESHOLD && dy < TARGET_AREA_THRESHOLD;
-        });
-
-        // 🔑 4. 원래 구역 키 찾기 (교환 로직에서 필요)
-        const originalPosKey = initialPosition ? findZoneKeyByCoordinates(initialPosition.x, initialPosition.y) : null;
-
-        // 🔑 [핵심 로직 분기] 요청하신 세 가지 규칙 적용
-        if (targetPlayer && targetPosKey && originalPosKey) {
-          // Case 1: 구역에 선수가 있고 겹쳤으면 스왑
-          handlePlayerSwap(finalDraggingId, targetPlayer.id, targetPosKey, originalPosKey, initialPosition);
-          console.log(`✨ 선수 교환 (아이콘 겹침): ${originalPosKey} ↔️ ${targetPosKey}`);
-        } else if (targetPosKey) {
-          // 🔑 [핵심 수정] Case 2: 드롭한 구역이 비어있는지 확인
-          const occupyingPlayer = currentFormation.find((p) => p.posKey === targetPosKey && p.id !== finalDraggingId);
-
-          if (occupyingPlayer && occupyingPlayer.position !== 'GK') {
-            // 2-1. 🔑 [핵심 변경] 구역이 점유되었고, GK가 아니면 스왑
-            handlePlayerSwap(finalDraggingId, occupyingPlayer.id, targetPosKey, originalPosKey, initialPosition);
-            console.log(`✨ 선수 교환 (빈 구역 드롭): ${originalPosKey} ↔️ ${targetPosKey}`);
-          } else if (!occupyingPlayer) {
-            // 2-2. 빈 구역임 -> 위치와 포지션 업데이트
-            setCurrentFormation((prevFormation) =>
-              prevFormation.map((player) =>
-                player.id === finalDraggingId
-                  ? { ...player, x: dropX, y: dropY, position: targetPosKey, posKey: targetPosKey }
-                  : player
-              )
-            );
-            console.log(`✅ 빈 구역 ${targetPosKey}으로 이동.`);
-          } else {
-            // 2-3. GK가 있는 구역이거나 다른 이유로 이동 불가 -> 원래 위치로 복귀
-            setCurrentFormation((prevFormation) =>
-              prevFormation.map((player) =>
-                player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
-              )
-            );
-            console.log(`❌ ${targetPosKey} 구역으로 이동할 수 없습니다. 원래 위치로 복귀.`);
-          }
-        } else {
-          // Case 3: 🔑 [핵심 수정] 구역 밖에서 드롭한 경우 -> 원래 위치로 복귀
-          setCurrentFormation((prevFormation) =>
-            prevFormation.map((player) =>
-              player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
-            )
-          );
-          //console.log('❌ 구역 밖 드롭. 원래 위치로 복귀.');
-        }
-
-        // 등록된 리스너를 정확히 제거 (클로저를 활용)
-        window.removeEventListener('mousemove', handleMove);
-        window.removeEventListener('mouseup', stopDrag);
-        window.removeEventListener('touchmove', handleMove);
-        window.removeEventListener('touchend', stopDrag);
-      };
-
-      const handleMove = handleMouseMove;
       // 드래그 시작 시 전역 이벤트 리스너 등록
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', stopDrag);
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', stopDrag);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleMouseMove, { passive: false });
+      window.addEventListener('touchend', handleMouseUp, { passive: true });
     },
-    [handleMouseMove, pitchRef, currentFormation, handlePlayerSwap]
+    [handleMouseMove, handleMouseUp, currentFormation]
   );
+
+  // 🔑 [핵심 수정] 컴포넌트 언마운트 시 전역 이벤트 리스너 정리
+  // 이 부분이 없으면 페이지를 벗어나도 스크롤 방지 로직이 남아있게 됩니다.
+  useEffect(() => {
+    const handleMove = handleMouseMove;
+    // 컴포넌트가 언마운트될 때 실행될 클린업 함수
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('touchmove', handleMove);
+      // mouseup/touchend는 stopDrag 내부에서 정의되므로 여기서는 move 이벤트만 제거해도 대부분의 문제를 해결할 수 있습니다.
+      // stopDrag 핸들러가 남아있을 수 있지만, draggingId가 null이므로 큰 문제를 일으키지 않습니다.
+    };
+  }, [handleMouseMove]); // handleMouseMove가 변경될 때마다 이 effect를 재설정합니다.
 
   // 🔑 Link State에서 팀 정보 추출
   const stateTeam = location.state?.team;
@@ -359,7 +404,7 @@ const FormationPage = ({ teamId }) => {
   return (
     <div className="p-0">
       {/* 🔑 [수정] H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
-      <div className="px-4 mb-1 flex justify-between items-center">
+      <div className="px-4 mb-1 mt-2 flex justify-between items-center">
         {/* 1. 팀 이름 (왼쪽 정렬) */}
         <h2 className="text-xl font-bold flex items-center text-gray-800 flex-shrink">
           <Shield className="w-6 h-6 mr-2" />
@@ -404,22 +449,31 @@ const FormationPage = ({ teamId }) => {
               <div
                 key={player.id}
                 className="absolute"
+                // 🔑 [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
+                onMouseDown={(e) => handleMouseDown(e, player.id)}
+                onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
                 style={{
                   top: `${player.y}%`,
                   left: `${player.x}%`,
                   transform: 'translate(-50%, -50%)',
                   zIndex: player.id === draggingId ? 10 : 1, // 드래그 중인 요소를 위로 올림
-                  touchAction: 'none', // 터치 장치에서 기본 동작 방지
+                  touchAction: 'auto', // ⚽️ 모바일에서 아이콘 드래그 허용
                 }}
-                // 🔑 [핵심] 드래그 시작 이벤트 핸들러 연결
-                onMouseDown={(e) => handleMouseDown(e, player.id)}
-                onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
               >
                 <PlayerIcon player={player} shirtColor="bg-blue-600" />
               </div>
             );
           })}
         </FootballPitch>
+
+        {/* 🔑 [핵심] 3. PlayerListPanel 배치 (FootballPitch 아래) */}
+        <div className="px-4">
+          <PlayerListPanel
+            allPlayers={teamPlayers} // 🔑 API로 불러온 전체 선수 목록 전달
+            onPlayerClick={(player) => console.log('선수 클릭:', player.name)}
+            loading={playersLoading} // 🔑 로딩 상태 전달
+          />
+        </div>
       </div>
 
       <div className="mt-4 text-center text-gray-500 text-sm">

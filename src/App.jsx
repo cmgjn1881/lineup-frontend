@@ -53,7 +53,7 @@ const FormationWrapper = () => {
  */
 const AuthRedirect = () => {
   const auth = useAuth();
-  return auth.isAuthenticated ? <Navigate to="/team" replace /> : <LoginPage />;
+  return auth.isAuthenticated ? <Navigate to="/teams" replace /> : <LoginPage />;
 };
 
 const Header = () => {
@@ -78,8 +78,8 @@ const Header = () => {
   }
 
   return (
-    <nav className="bg-gray-800 sticky top-0 z-10">
-      <div className="max-w-sm mx-auto px-4 bg-gray-800 shadow-lg rounded-md">
+    <nav className="bg-gray-800 shadow-lg fixed top-0 left-0 w-full z-10 h-16">
+      <div className="max-w-sm mx-auto px-4">
         <div className="flex justify-between items-center py-4">
           {/* 🔑 제목 영역에 조건부 텍스트 삽입 */}
           <div className="text-white font-extrabold text-xl tracking-wider">{pageTitle}</div>
@@ -132,70 +132,74 @@ const FooterNav = () => {
   );
 };
 
+// src/App.jsx (AppContent 컴포넌트 수정)
+
 const AppContent = () => {
-  // 🔑 새로운 컴포넌트 생성
-  const location = useLocation(); // 🔑 useLocation을 이제 안전하게 호출
+  const location = useLocation();
   const isFormationPage = location.pathname.includes('/formation');
 
-  // FooterNav 패딩 클래스 계산
-  const paddingClass = isFormationPage ? 'pb-4' : 'pb-16';
-
-  const mainClasses = isFormationPage ? 'mx-auto py-2' : 'max-w-sm mx-auto py-6 px-4';
-
   return (
-    // 🔑 기존 App 컴포넌트의 모든 내부 JSX 반환
-    <div className={`min-h-screen bg-gray-50 ${paddingClass}`}>
-      <Header />
-
-      <main className={mainClasses}>
-        <Routes>
-          {/* ... 기존 Routes 유지 ... */}
-          <Route path="/" element={<AuthRedirect />} />
-          <Route
-            path="/teams"
-            element={
-              <ProtectedRoute>
-                <TeamPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teams/:teamId"
-            element={
-              <ProtectedRoute>
-                <TeamDetailWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teams/:teamId/players"
-            element={
-              <ProtectedRoute>
-                <PlayerListWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teams/:teamId/formation"
-            element={
-              <ProtectedRoute>
-                <FormationWrapper />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/teams" replace />} />
-        </Routes>
+    // ⚽️ [핵심 수정] Flexbox를 사용하여 전체 레이아웃을 구성합니다.
+    // 1. 최상위 div: 화면 전체 높이를 차지하고, 자식 요소들을 세로(flex-col)로 배치합니다.
+    <div className="flex flex-col h-screen bg-gray-50">
+      <Header /> {/* Header는 fixed position */}
+      <main
+        // 2. main: flex-1을 통해 남은 공간을 모두 차지하고, 내용이 넘치면 스스로 스크롤됩니다.
+        // Header와 Footer가 fixed이므로, 내용이 가려지지 않도록 상단과 하단에 패딩을 줍니다.
+        className={`w-full flex-1 overflow-y-auto ${
+          isFormationPage ? 'pt-16' : 'pt-16 pb-16' // FormationPage는 Footer가 없으므로 하단 패딩 제외
+        }`}
+      >
+        {/* 3. 내부 컨텐츠 영역 */}
+        <div className={isFormationPage ? '' : 'max-w-sm mx-auto py-6 px-4'}>
+          <Routes>
+            {/* ... 기존 Routes 유지 ... */}
+            <Route path="/" element={<AuthRedirect />} />
+            <Route
+              path="/teams"
+              element={
+                <ProtectedRoute>
+                  <TeamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId"
+              element={
+                <ProtectedRoute>
+                  <TeamDetailWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/players"
+              element={
+                <ProtectedRoute>
+                  <PlayerListWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/formation"
+              element={
+                <ProtectedRoute>
+                  <FormationWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/teams" replace />} />
+          </Routes>
+        </div>
       </main>
-
-      <FooterNav />
+      <FooterNav /> {/* FooterNav는 fixed position */}
     </div>
   );
 };
