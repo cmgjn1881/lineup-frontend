@@ -3,6 +3,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 
+const POSITION_OPTIONS = ['FW', 'MF', 'DF', 'GK'];
+
+const POSITION_COLORS = {
+  FW: 'bg-red-600 hover:bg-red-700', // 공격수 - 빨강
+  MF: 'bg-green-600 hover:bg-green-700', // 미드필더 - 초록
+  DF: 'bg-blue-600 hover:bg-blue-700', // 수비수 - 파랑
+  GK: 'bg-yellow-500 hover:bg-yellow-600', // 골키퍼 - 노랑 (글자색 대비를 위해 500 사용)
+};
+
+const DEFAULT_UNSELECTED_STYLE = 'bg-gray-200 text-gray-700 hover:bg-gray-300';
+
 const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propError, isSubmitting }) => {
   // 🔑 [수정] 초기 데이터가 없을 때 모든 필드를 명시적으로 빈 문자열("")로 설정
   const defaultData = useMemo(() => ({ name: '', position: '', backNumber: '' }), []);
@@ -37,6 +48,10 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePositionSelect = (positionValue) => {
+    setFormData((prev) => ({ ...prev, position: positionValue }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setLocalError('');
@@ -68,16 +83,29 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
         required
         className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
       />
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 block">포지션 선택 (FW, MF, DF, GK)</label>
+        <div className="flex justify-around space-x-2">
+          {POSITION_OPTIONS.map((pos) => (
+            <button
+              key={pos}
+              type="button" // 폼 제출을 막기 위해 필수
+              onClick={() => handlePositionSelect(pos)}
+              className={`
+                px-3 py-2 rounded-lg font-semibold transition duration-150 w-full text-sm
+                ${
+                  formData.position === pos
+                    ? `${POSITION_COLORS[pos]} text-white shadow-md` // 선택된 스타일
+                    : DEFAULT_UNSELECTED_STYLE // 기본 스타일
+                }
+              `}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex space-x-3">
-        <input
-          type="text"
-          name="position"
-          placeholder="포지션 (예: CF, LW)"
-          value={formData.position}
-          onChange={handleChange}
-          required
-          className="w-2/3 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-        />
         <input
           type="number"
           name="backNumber"
