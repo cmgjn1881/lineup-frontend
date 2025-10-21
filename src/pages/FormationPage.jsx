@@ -89,13 +89,19 @@ const FormationPage = ({ teamId }) => {
       // 1. 축구장 영역의 위치 및 크기 계산
       const rect = pitchRef.getBoundingClientRect();
 
+      const MIN_X = 8;
+      const MAX_X = 92;
+
+      const MIN_Y = 8;
+      const MAX_Y = 85;
+
       // 2. 축구장 내부에서의 마우스 상대 좌표 (픽셀)
       const mouseX = clientX - rect.left;
       const mouseY = clientY - rect.top;
 
-      // 3. 픽셀 좌표를 백분율(%)로 변환 (0% ~ 100% 범위로 제한)
-      let newX = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
-      let newY = Math.max(0, Math.min(100, (mouseY / rect.height) * 100));
+      // 3. 픽셀 좌표를 백분율(%)로 변환 (MIN_X, MIN_Y ~ MAX_X, MAX_Y 범위로 제한)
+      let newX = Math.max(MIN_X, Math.min(MAX_X, (mouseX / rect.width) * 100));
+      let newY = Math.max(MIN_Y, Math.min(MAX_Y, (mouseY / rect.height) * 100));
 
       // 4. 상태 업데이트
       setCurrentFormation((prevFormation) =>
@@ -139,6 +145,15 @@ const FormationPage = ({ teamId }) => {
   // 💡 [핵심] 드래그 시작 핸들러
   const handleMouseDown = useCallback(
     (e, id) => {
+      const playerToDrag = currentFormation.find((p) => p.id === id);
+
+      // 골키퍼(GK)는 드래그를 시작할 수 없도록 막습니다.
+      if (playerToDrag && playerToDrag.position === 'GK') {
+        // 골키퍼는 여기서 드래그 시작 로직을 종료합니다.
+        console.log('⛔️ GK는 드래그하여 위치를 옮길 수 없습니다.');
+        return;
+      }
+
       if (e.type === 'mousedown') {
         e.preventDefault();
       }
@@ -146,7 +161,7 @@ const FormationPage = ({ teamId }) => {
       console.log('✅ DRAG START - Player ID:', id);
 
       // 🔑 [추가] 드래그 시작 선수의 현재 위치 저장
-      const playerToDrag = currentFormation.find((p) => p.id === id);
+
       if (playerToDrag) {
         startPositionRef.current = { x: playerToDrag.x, y: playerToDrag.y };
       }
@@ -185,15 +200,22 @@ const FormationPage = ({ teamId }) => {
           return dx < TARGET_AREA_THRESHOLD && dy < TARGET_AREA_THRESHOLD;
         });
 
-        // 🔑 [핵심 수정] 3. 위치 교환 실행 또는 현재 위치 유지
-        if (targetPlayer && initialPosition) {
-          // 타겟 선수가 있으면 위치 교환 (드래그된 선수의 "시작 위치"와 교환)
+        // 🔑 [핵심 수정] 3. 분리된 조건문 로직 적용
+        if (targetPlayer && targetPlayer.position === 'GK' && initialPosition) {
+          // Case 1: 타겟이 GK일 경우 -> 드래그 시작 위치로 복귀
+          setCurrentFormation((prevFormation) =>
+            prevFormation.map((player) =>
+              player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
+            )
+          );
+          console.log('⛔️ GK 위치에 드롭하여 시작 위치로 복귀됨.');
+        } else if (targetPlayer && initialPosition) {
+          // Case 2: 타겟이 필드 선수일 경우 -> 위치 교환
+          // 타겟 선수가 존재하고, GK가 아닐 경우 (position !== 'GK'), 교환 로직 실행
           handlePlayerSwap(finalDraggingId, targetPlayer.id, initialPosition);
           console.log('✨ 선수 교환 완료.');
         } else {
-          // 타겟 선수가 없으면, 별도의 상태 업데이트를 하지 않습니다.
-          // handleMouseMove에 의해 이미 최종 드롭 위치로 currentFormation이 업데이트되었고,
-          // 리스너 제거 후 이 상태가 그대로 유지됩니다.
+          // Case 3: 타겟이 없을 경우 -> 드롭 위치에 그대로 배치 (기존 로직 유지)
           console.log('드롭 위치에 다른 선수가 없어 드래그된 위치에 배치됨.');
         }
 
