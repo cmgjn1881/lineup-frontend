@@ -20,15 +20,24 @@ const calculateInitialFormation = () => {
 
 export const useFormationDrag = () => {
   // 1. 상태 및 Ref 정의
-  const [currentFormation, setCurrentFormation] = useState(calculateInitialFormation);
+  const [initialFormation] = useState(calculateInitialFormation); // ⚽️ [추가] 초기 상태 저장
+  const [currentFormation, setCurrentFormation] = useState(initialFormation);
   const [draggingId, setDraggingId] = useState(null);
   const [activeSlot, setActiveSlot] = useState(null);
   const [pitchRef, setPitchRef] = useState(null);
+  const [isDirty, setIsDirty] = useState(false); // ⚽️ [추가] 변경 여부 상태
 
   const draggingIdRef = useRef(null);
   const isDraggingRef = useRef(false); // ⚽️ [추가] 실제 드래그 발생 여부 추적
   const startPositionRef = useRef(null);
   const formationRef = useRef(currentFormation); // 최신 포메이션 상태 참조
+
+  // ⚽️ [추가] currentFormation이 변경될 때마다 초기 상태와 비교하여 isDirty 상태를 업데이트합니다.
+  useEffect(() => {
+    // JSON.stringify를 사용한 간단한 깊은 비교
+    const dirty = JSON.stringify(currentFormation) !== JSON.stringify(initialFormation);
+    setIsDirty(dirty);
+  }, [currentFormation, initialFormation]);
 
   // 💡 포메이션이 변경될 때마다 ref를 업데이트합니다.
   useEffect(() => {
@@ -281,7 +290,7 @@ export const useFormationDrag = () => {
         );
       }
     },
-    [handleMouseMove, pitchRef, currentFormation, handlePlayerSwap, SLOT_ZONES_BOUNDS] // 🔑 의존성 유지
+    [handleMouseMove, pitchRef, handlePlayerSwap, SLOT_ZONES_BOUNDS] // 🔑 의존성 유지
   );
 
   // 6. 💡 [핵심] 드래그 시작 핸들러 (handleMouseDown)
@@ -330,8 +339,8 @@ export const useFormationDrag = () => {
 
   // 8. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
   const resetFormation = useCallback(() => {
-    setCurrentFormation(calculateInitialFormation());
-  }, []);
+    setCurrentFormation(initialFormation); // ⚽️ [수정] 저장된 초기 상태로 리셋
+  }, [initialFormation]);
 
   return {
     currentFormation,
@@ -344,5 +353,6 @@ export const useFormationDrag = () => {
     resetFormation,
     handleSlotClick,
     handleAssignPlayer,
+    isDirty, // ⚽️ [추가] isDirty 상태를 외부로 노출
   };
 };

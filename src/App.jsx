@@ -2,8 +2,8 @@
 
 import React, { useRef } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { HashRouter, Routes, Route, Navigate, useParams, useLocation, Link } from 'react-router-dom';
-import { useAuth } from './context/useAuth';
+import { createHashRouter, RouterProvider, Outlet, Navigate, useParams, useLocation, Link } from 'react-router-dom';
+import { useAuth } from './context/useAuth'; // Custom Hook 임포트
 import LoginPage from './pages/LoginPage'; // 분리된 페이지 임포트
 import TeamPage from './pages/TeamPage'; // 분리된 페이지 임포트
 import TeamDetailPage from './pages/TeamDetailPage'; // 새로운 컴포넌트 임포트
@@ -151,57 +151,14 @@ const AppContent = () => {
         className={`w-full flex-1 overflow-y-auto ${
           isFormationPage ? 'pt-16' : 'pt-16 pb-16' // FormationPage는 Footer가 없으므로 하단 패딩 제외
         }`}
-        ref={mainRef} // 🔑 mainRef를 할당
+        ref={mainRef}
       >
         {/* 3. 내부 컨텐츠 영역 */}
         <div className={isFormationPage ? '' : 'max-w-sm mx-auto py-6 px-4'}>
           {/* 🔑 [수정] ScrollToTop에 Ref 전달 */}
           <ScrollToTop targetRef={mainRef} />
-          <Routes>
-            {/* ... 기존 Routes 유지 ... */}
-            <Route path="/" element={<AuthRedirect />} />
-            <Route
-              path="/teams"
-              element={
-                <ProtectedRoute>
-                  <TeamPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId"
-              element={
-                <ProtectedRoute>
-                  <TeamDetailWrapper />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId/players"
-              element={
-                <ProtectedRoute>
-                  <PlayerListWrapper />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId/formation"
-              element={
-                <ProtectedRoute>
-                  <FormationWrapper />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/teams" replace />} />
-          </Routes>
+          {/* ⚽️ [수정] Routes 대신 Outlet을 사용하여 자식 라우트를 렌더링합니다. */}
+          <Outlet />
         </div>
       </main>
       <FooterNav /> {/* FooterNav는 fixed position */}
@@ -209,14 +166,54 @@ const AppContent = () => {
   );
 };
 
+// ⚽️ [핵심 수정] createHashRouter를 사용하여 데이터 라우터를 생성합니다.
+const router = createHashRouter([
+  {
+    path: '/',
+    element: <AuthRedirect />,
+  },
+  {
+    path: '/',
+    element: (
+      <ProtectedRoute>
+        <AppContent />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        path: 'teams',
+        element: <TeamPage />,
+      },
+      {
+        path: 'teams/:teamId',
+        element: <TeamDetailWrapper />,
+      },
+      {
+        path: 'teams/:teamId/players',
+        element: <PlayerListWrapper />,
+      },
+      {
+        path: 'teams/:teamId/formation',
+        element: <FormationWrapper />,
+      },
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
+    ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/teams" replace />,
+  },
+]);
+
 const App = () => (
   <div style={{ fontFamily: 'Inter, sans-serif' }}>
-    {/* 🔑 useLocation이 내부의 AppContent에서 호출되도록 <HashRouter>를 가장 바깥쪽에 배치 */}
-    <HashRouter>
-      <AuthProvider>
-        <AppContent /> {/* 🔑 AppContent를 렌더링 */}
-      </AuthProvider>
-    </HashRouter>
+    <AuthProvider>
+      {/* ⚽️ [핵심 수정] RouterProvider를 사용하여 앱 전체에 라우터를 제공합니다. */}
+      <RouterProvider router={router} />
+    </AuthProvider>
   </div>
 );
 

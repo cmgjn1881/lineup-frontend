@@ -9,6 +9,7 @@ import { Shield, RotateCcw, List, Save } from 'lucide-react';
 import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
 import { useFormationDrag } from '../hooks/useFormationDrag'; // 🔑 useFormationDrag 훅 임포트
+import { useBlocker } from 'react-router-dom'; // ⚽️ [추가] React Router의 useBlocker 훅
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 
 const FormationPage = ({ teamId }) => {
@@ -26,6 +27,7 @@ const FormationPage = ({ teamId }) => {
     handleSlotClick,
     handleAssignPlayer,
     resetFormation, // 초기화 함수
+    isDirty, // ⚽️ [추가] 포메이션 변경 여부 상태
   } = useFormationDrag();
 
   // 🔑 API 관련 상태 및 로직 (훅과 독립적)
@@ -53,6 +55,23 @@ const FormationPage = ({ teamId }) => {
   // 🔑 Link State에서 팀 정보 추출
   const stateTeam = location.state?.team;
   const teamName = stateTeam?.name || `팀 ID ${teamId} (정보 없음)`;
+
+  // ⚽️ [핵심 추가] 변경 사항이 있을 때만 페이지 이동을 막는 Blocker 설정
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // ⚽️ [핵심 수정] Blocker의 상태가 'blocked'일 때 모달을 띄우고, 사용자의 선택에 따라 blocker를 제어합니다.
+  // 이 로직은 useEffect 안에서 처리하여 렌더링 중 사이드 이펙트를 방지하고, 무한 알림 버그를 해결합니다.
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (window.confirm('저장되지 않은 변경사항이 있습니다. 정말로 페이지를 나가시겠습니까?')) {
+        blocker.proceed(); // 사용자가 '확인'을 누르면 내비게이션을 계속 진행합니다.
+      } else {
+        blocker.reset(); // 사용자가 '취소'를 누르면 내비게이션을 중단하고 blocker 상태를 초기화합니다.
+      }
+    }
+  }, [blocker]);
 
   // 1. 🚨 필수 데이터 (팀 이름)가 없는 경우 즉시 오류 메시지 반환
   if (!stateTeam?.name) {
