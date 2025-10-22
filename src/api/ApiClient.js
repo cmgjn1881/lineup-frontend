@@ -4,12 +4,15 @@ import axios from 'axios';
 import { useContext, useMemo } from 'react';
 import { AuthContext } from '../context/AuthContextDefinition';
 
+const RENDER_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = `${RENDER_BASE_URL}/api`;
+
 // [핵심] Interceptor 설정이 포함된 API Client
 class ApiClient {
   constructor(authContext) {
     this.auth = authContext;
     this.client = axios.create({
-      baseURL: '/api',
+      baseURL: API_BASE_URL,
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -37,7 +40,7 @@ class ApiClient {
           if (refreshToken) {
             try {
               // 토큰 재발급 요청 (refresh API 호출)
-              const refreshResponse = await axios.post('/api/auth/refresh', {
+              const refreshResponse = await this.client.post('/auth/refresh', {
                 // baseURL 사용
                 refreshToken: refreshToken,
                 oldAccessToken: oldAccessToken,
