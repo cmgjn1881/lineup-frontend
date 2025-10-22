@@ -38,7 +38,7 @@ const TeamDetailPage = ({ teamId }) => {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="pt-0 pr-6 pb-6 pl-6 max-w-2xl mx-auto">
       <h2 className="text-4xl font-extrabold mb-2 text-indigo-700 flex items-center">
         <Shield className="w-8 h-8 mr-3" /> {team.name}
       </h2>

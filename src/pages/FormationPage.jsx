@@ -7,8 +7,8 @@ import PlayerIcon from '../components/PlayerIcon';
 import PlayerListPanel from '../components/PlayerListPanel';
 import { Shield, RotateCcw, List, Save } from 'lucide-react';
 import { useApiClient } from '../api/ApiClient';
-// 🔑 useFormationDrag 훅 임포트
-import { useFormationDrag } from '../hooks/useFormationDrag';
+import PlayerListModal from '../components/PlayerListModal';
+import { useFormationDrag } from '../hooks/useFormationDrag'; // 🔑 useFormationDrag 훅 임포트
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 
 const FormationPage = ({ teamId }) => {
@@ -22,20 +22,15 @@ const FormationPage = ({ teamId }) => {
     draggingId,
     setPitchRef,
     handleMouseDown,
+    activeSlot,
+    handleSlotClick,
+    handleAssignPlayer,
     resetFormation, // 초기화 함수
   } = useFormationDrag();
 
   // 🔑 API 관련 상태 및 로직 (훅과 독립적)
   const [teamPlayers, setTeamPlayers] = useState([]);
   const [playersLoading, setPlayersLoading] = useState(true);
-
-  // 🔑 [추가] 선수 목록 패널 토글 상태
-  const [isPanelVisible, setIsPanelVisible] = useState(false);
-
-  // 💡 [추가] 패널 토글 핸들러
-  const handleTogglePanel = () => {
-    setIsPanelVisible((prev) => !prev);
-  };
 
   // 💡 컴포넌트 마운트 시 팀 선수 목록을 불러옵니다.
   useEffect(() => {
@@ -160,12 +155,13 @@ const FormationPage = ({ teamId }) => {
                 // 🔑 [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
                 onMouseDown={(e) => handleMouseDown(e, player.id)}
                 onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
+                onClick={() => handleSlotClick(player.id, player.posKey)}
                 style={{
                   top: `${player.y}%`,
                   left: `${player.x}%`,
                   transform: 'translate(-50%, -50%)',
                   zIndex: player.id === draggingId ? 10 : 1, // 드래그 중인 요소를 위로 올림
-                  touchAction: 'none', // 터치 스크롤 방지
+                  touchAction: 'pan-y', // ⚽️ 세로 스크롤은 항상 허용
                 }}
               >
                 <PlayerIcon player={player} shirtColor="bg-blue-600" />
@@ -174,31 +170,20 @@ const FormationPage = ({ teamId }) => {
           })}
         </FootballPitch>
 
-        {/* 🔑 [핵심] 3. PlayerListPanel 토글 버튼 */}
-        <div className="px-4 mt-1 mb-1">
-          <button
-            onClick={handleTogglePanel}
-            className="w-full flex justify-between items-center py-3 px-4 border rounded-lg shadow-sm 
-                           bg-indigo-50 hover:bg-indigo-100 transition duration-200 text-indigo-600 font-semibold"
-            aria-expanded={isPanelVisible}
-            aria-controls="player-list-panel"
+        {/* 🔑 [핵심] 3. PlayerListPanel Modal 구현 */}
+        {activeSlot && (
+          <PlayerListModal
+            isOpen={!!activeSlot}
+            onClose={() => handleSlotClick(null)}
+            title={`'${activeSlot.posKey}' 포지션 선수 배정`}
           >
-            <span className="flex items-center text-sm">
-              <Users className="w-4 h-4 mr-2" />
-              전체 명단 보기 ({teamPlayers.length}명)
-            </span>
-            {isPanelVisible ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
-        </div>
-        {/* 🔑 [핵심] 4. PlayerListPanel 조건부 렌더링 */}
-        {isPanelVisible && (
-          <div id="player-list-panel" className="px-4 transition-all duration-300 ease-in-out">
             <PlayerListPanel
               allPlayers={teamPlayers}
-              onPlayerClick={(player) => console.log('선수 클릭:', player.name)}
               loading={playersLoading}
+              // 🔑 클릭된 선수를 activeSlot에 배정하는 함수 연결
+              onPlayerClick={(player) => handleAssignPlayer(activeSlot.id, player)}
             />
-          </div>
+          </PlayerListModal>
         )}
       </div>
     </div>

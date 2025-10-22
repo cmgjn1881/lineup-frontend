@@ -1,7 +1,7 @@
 // src/hooks/useFormationDrag.js
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-// 💡 constants는 FormationPage와 동일한 경로에서 import해야 합니다. (utils/formationConstants 파일이 존재한다고 가정)
+// 💡 constants는 FormationPage와 동일한 경로에서 import해야 합니다.
 import { SLOT_ZONES_BOUNDS, findZoneKeyByCoordinates, POSITIONS, DEFAULT_PLAYERS } from '../utils/formationConstants';
 
 // 🔑 [도우미 함수] 초기 포메이션 데이터 준비
@@ -11,7 +11,7 @@ const calculateInitialFormation = () => {
     return {
       ...player,
       id: index + 1, // 고유 ID 부여
-      dbPlayerId: null, // 🔑 [추가] DB 선수가 할당되면 여기에 실제 ID를 저장
+      dbPlayerId: null, // DB 선수가 할당되면 여기에 실제 ID를 저장
       x: x, // 초기 X 좌표 (%)
       y: y, // 초기 Y 좌표 (%)
     };
@@ -22,9 +22,11 @@ export const useFormationDrag = () => {
   // 1. 상태 및 Ref 정의
   const [currentFormation, setCurrentFormation] = useState(calculateInitialFormation);
   const [draggingId, setDraggingId] = useState(null);
+  const [activeSlot, setActiveSlot] = useState(null);
   const [pitchRef, setPitchRef] = useState(null);
 
   const draggingIdRef = useRef(null);
+  const isDraggingRef = useRef(false); // ⚽️ [추가] 실제 드래그 발생 여부 추적
   const startPositionRef = useRef(null);
   const formationRef = useRef(currentFormation); // 최신 포메이션 상태 참조
 
@@ -33,7 +35,41 @@ export const useFormationDrag = () => {
     formationRef.current = currentFormation;
   }, [currentFormation]);
 
-  // 2. 💡 [추가] 선수 위치 교환 로직 (handlePlayerSwap)
+  // 2. 💡 [추가] 슬롯 클릭 및 배정 핸들러
+  const handleSlotClick = useCallback((id, posKey) => {
+    // ⚽️ [핵심 수정] 드래그 동작이 발생했다면 모달을 띄우지 않고 즉시 종료합니다.
+    if (isDraggingRef.current) {
+      return;
+    }
+
+    // ⚽️ [핵심 수정] id가 null이면 모달을 닫기 위한 호출이므로, 항상 activeSlot을 null로 설정합니다.
+    if (id === null) {
+      setActiveSlot(null);
+      return;
+    }
+
+    setActiveSlot((prev) => (prev?.id === id ? null : { id, posKey }));
+  }, []);
+
+  const handleAssignPlayer = useCallback((slotId, player) => {
+    setCurrentFormation((prevFormation) =>
+      prevFormation.map((p) =>
+        p.id === slotId
+          ? {
+              ...p,
+              dbPlayerId: player.id,
+              name: player.name,
+              backNumber: player.backNumber || player.number,
+              position: player.position,
+              posKey: p.posKey,
+            }
+          : p
+      )
+    );
+    setActiveSlot(null); // 배정 후 모달 닫기
+  }, []);
+
+  // 3. 💡 [추가] 선수 위치 교환 로직 (handlePlayerSwap)
   const handlePlayerSwap = useCallback(
     (draggedPlayerId, targetPlayerId, targetPosKey, originalPosKey, draggedPlayerInitialPos) => {
       setCurrentFormation((prevFormation) => {
@@ -74,27 +110,44 @@ export const useFormationDrag = () => {
         return newFormation;
       });
     },
-    [] // SLOT_ZONES_BOUNDS 등 상수는 외부에서 가져왔고 변하지 않는다고 가정
+    [] // SLOT_ZONES_BOUNDS 등 상수는 외부에서 가져왔고 불변이라고 가정
   );
 
-  // 3. 💡 [핵심] 마우스 이동 감지 핸들러 (handleMouseMove)
+  // 4. 💡 [핵심] 마우스 이동 감지 핸들러 (handleMouseMove)
   const handleMouseMove = useCallback(
     (e) => {
       const currentDraggingId = draggingIdRef.current;
       if (!currentDraggingId || !pitchRef) return;
 
-      // 💡 [스크롤 방지] touchmove 이벤트에서 스크롤 차단
-      const isTouch = e.type.startsWith('touch');
-      if (e.type === 'touchmove') {
-        // 🚨 [필수] 브라우저 스크롤을 막습니다. (passive: false 덕분에 작동함)
+      // ⚽️ [핵심 수정] 드래그 중 스크롤 방지 로직 강화
+      // 이벤트가 취소 가능할 때만 preventDefault를 호출하여 오류를 방지하고, 스크롤을 확실하게 막습니다.
+      if (e.cancelable) {
         e.preventDefault();
       }
 
       const draggedPlayer = formationRef.current.find((p) => p.id === currentDraggingId);
       const isGK = draggedPlayer && draggedPlayer.position === 'GK';
 
+      const isTouch = e.type.startsWith('touch');
       const clientX = isTouch ? e.touches[0].clientX : e.clientX;
       const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+      // ⚽️ [추가] 드래그 임계값(threshold) 로직
+      // 사용자가 선수를 잡고 일정 거리 이상 움직였을 때만 드래그로 간주합니다.
+      if (!isDraggingRef.current) {
+        const startPos = startPositionRef.current;
+        if (startPos) {
+          const dx = Math.abs(clientX - startPos.clientX);
+          const dy = Math.abs(clientY - startPos.clientY);
+          // 3px 이상 움직이면 드래그로 확정
+          if (dx > 3 || dy > 3) {
+            isDraggingRef.current = true;
+          } else {
+            // 임계값 미만이면 아무것도 하지 않음 (스크롤 허용)
+            return;
+          }
+        }
+      }
 
       const rect = pitchRef.getBoundingClientRect();
       const rawX = ((clientX - rect.left) / rect.width) * 100;
@@ -121,22 +174,34 @@ export const useFormationDrag = () => {
     [draggingIdRef, pitchRef, formationRef]
   );
 
-  // 4. 💡 [핵심] 드래그 종료/드롭 처리 핸들러 (handleMouseUp)
+  // 5. 💡 [핵심] 드래그 종료/드롭 처리 핸들러 (handleMouseUp)
   const handleMouseUp = useCallback(
     (event) => {
       const finalDraggingId = draggingIdRef.current;
       const initialPosition = startPositionRef.current;
+      const wasDragging = isDraggingRef.current; // ⚽️ [추가] 드래그 발생 여부 저장
 
       // 1. 드래그 종료 상태 업데이트 (클린업 시작)
       setDraggingId(null);
       draggingIdRef.current = null;
       startPositionRef.current = null;
 
+      // ⚽️ [핵심 수정] isDraggingRef.current를 즉시 false로 바꾸면, 뒤이어 발생하는 click 이벤트에서
+      // 드래그 여부를 판단할 수 없습니다. setTimeout으로 초기화를 지연시켜 이 문제를 해결합니다.
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 0);
+
       // 2. [필수] 전역 이벤트 리스너 제거
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleMouseMove);
       window.removeEventListener('touchend', handleMouseUp);
+
+      // ⚽️ [추가] 드래그가 아닌 단순 클릭이었는지 확인하고 콘솔에 로그를 출력합니다.
+      if (!wasDragging) {
+        console.log('Player icon clicked (not dragged)');
+      }
 
       if (!finalDraggingId || !initialPosition) return;
 
@@ -169,7 +234,7 @@ export const useFormationDrag = () => {
       const targetPosKey = findZoneKeyByCoordinates(dropX, dropY);
 
       const TARGET_AREA_THRESHOLD = 5;
-      const targetPlayer = currentFormation.find((player) => {
+      const targetPlayer = formationRef.current.find((player) => {
         if (player.id === finalDraggingId) return false;
         if (player.position === 'GK') return false;
         const dx = Math.abs(player.x - dropX);
@@ -216,25 +281,31 @@ export const useFormationDrag = () => {
         );
       }
     },
-    [handleMouseMove, pitchRef, currentFormation, handlePlayerSwap, SLOT_ZONES_BOUNDS] // 🔑 의존성 추가
+    [handleMouseMove, pitchRef, currentFormation, handlePlayerSwap, SLOT_ZONES_BOUNDS] // 🔑 의존성 유지
   );
 
-  // 5. 💡 [핵심] 드래그 시작 핸들러 (handleMouseDown)
+  // 6. 💡 [핵심] 드래그 시작 핸들러 (handleMouseDown)
   const handleMouseDown = useCallback(
     (e, id) => {
       const playerToDrag = formationRef.current.find((p) => p.id === id);
+      const isTouch = e.type.startsWith('touch');
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
       if (playerToDrag && playerToDrag.position === 'GK') return;
 
-      if (e.type === 'mousedown') {
-        e.preventDefault();
-      }
-
       console.log('Drag started for player ID:', id);
+      // ⚽️ [추가] 드래그 시작 시 dbPlayerId를 콘솔에 출력합니다.
+      // 할당된 선수가 없으면 null이 출력됩니다.
+      console.log('DB Player ID:', playerToDrag?.dbPlayerId);
 
-      if (playerToDrag) {
-        startPositionRef.current = { x: playerToDrag.x, y: playerToDrag.y };
-      }
+      // ⚽️ [수정] 드래그 시작 시점의 화면 좌표(clientX, clientY)도 함께 저장합니다.
+      startPositionRef.current = {
+        x: playerToDrag.x,
+        y: playerToDrag.y,
+        clientX: clientX,
+        clientY: clientY,
+      };
 
       setDraggingId(id);
       draggingIdRef.current = id;
@@ -248,17 +319,16 @@ export const useFormationDrag = () => {
     [handleMouseMove, handleMouseUp]
   );
 
-  // 6. 💡 [클린업] 컴포넌트 언마운트 시 전역 이벤트 리스너 정리
+  // 7. 💡 [클린업] 컴포넌트 언마운트 시 전역 이벤트 리스너 정리
   useEffect(() => {
     const handleMove = handleMouseMove;
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('touchmove', handleMove);
-      // mouseup/touchend는 handleMouseUp 내부에서 정리되므로 move 이벤트만 정리
     };
   }, [handleMouseMove]);
 
-  // 7. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
+  // 8. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
   const resetFormation = useCallback(() => {
     setCurrentFormation(calculateInitialFormation());
   }, []);
@@ -267,9 +337,12 @@ export const useFormationDrag = () => {
     currentFormation,
     draggingId,
     pitchRef,
+    activeSlot,
     setPitchRef,
     handleMouseDown,
     handlePlayerSwap,
     resetFormation,
+    handleSlotClick,
+    handleAssignPlayer,
   };
 };
