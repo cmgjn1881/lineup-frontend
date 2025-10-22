@@ -9,9 +9,9 @@ export const SLOT_ZONES_BOUNDS = {
   // Defensive Zone
   LWB: { minX: 7, maxX: 24, minY: 60, maxY: 73, centerX: 16, centerY: 66 }, // Left Wing Back
   LB: { minX: 7, maxX: 24, minY: 73, maxY: 85, centerX: 16, centerY: 79 }, // Left Back
-  LCB: { minX: 24, maxX: 40, minY: 71, maxY: 85, centerX: 32, centerY: 78 }, // Left Center Back
+  LCB: { minX: 24, maxX: 40, minY: 71, maxY: 85, centerX: 36, centerY: 78 }, // Left Center Back
   CB: { minX: 40, maxX: 60, minY: 71, maxY: 85, centerX: 50, centerY: 78 }, // Center Back
-  RCB: { minX: 60, maxX: 76, minY: 71, maxY: 85, centerX: 68, centerY: 78 }, // Right Center Back
+  RCB: { minX: 60, maxX: 76, minY: 71, maxY: 85, centerX: 64, centerY: 78 }, // Right Center Back
   RB: { minX: 76, maxX: 93, minY: 73, maxY: 85, centerX: 84, centerY: 79 }, // Right Back
   RWB: { minX: 76, maxX: 93, minY: 60, maxY: 73, centerX: 84, centerY: 66 }, // Right Wing Back
 

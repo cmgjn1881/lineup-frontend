@@ -1,6 +1,6 @@
 // src/App.jsx
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { HashRouter, Routes, Route, Navigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/useAuth';
@@ -10,6 +10,7 @@ import TeamDetailPage from './pages/TeamDetailPage'; // 새로운 컴포넌트 �
 import PlayerListPage from './pages/PlayerListPage'; // 새로운 컴포넌트 임포트
 import ProfilePage from './pages/ProfilePage';
 import FormationPage from './pages/FormationPage';
+import ScrollToTop from './components/ScrollToTop';
 import { User, Briefcase, Shield } from 'lucide-react';
 
 // =================================================================================
@@ -137,6 +138,7 @@ const FooterNav = () => {
 const AppContent = () => {
   const location = useLocation();
   const isFormationPage = location.pathname.includes('/formation');
+  const mainRef = useRef(null);
 
   return (
     // ⚽️ [핵심 수정] Flexbox를 사용하여 전체 레이아웃을 구성합니다.
@@ -149,9 +151,12 @@ const AppContent = () => {
         className={`w-full flex-1 overflow-y-auto ${
           isFormationPage ? 'pt-16' : 'pt-16 pb-16' // FormationPage는 Footer가 없으므로 하단 패딩 제외
         }`}
+        ref={mainRef} // 🔑 mainRef를 할당
       >
         {/* 3. 내부 컨텐츠 영역 */}
         <div className={isFormationPage ? '' : 'max-w-sm mx-auto py-6 px-4'}>
+          {/* 🔑 [수정] ScrollToTop에 Ref 전달 */}
+          <ScrollToTop targetRef={mainRef} />
           <Routes>
             {/* ... 기존 Routes 유지 ... */}
             <Route path="/" element={<AuthRedirect />} />

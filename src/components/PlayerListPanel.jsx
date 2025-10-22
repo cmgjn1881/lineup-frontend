@@ -14,7 +14,7 @@ const PlayerListPanel = ({ allPlayers, onPlayerClick, loading }) => {
   const ITEM_WIDTH = 'w-24';
 
   return (
-    <div className="mt-6 p-4 border rounded-lg bg-white shadow-md">
+    <div className="mt-2 mb-2 p-4 border rounded-lg bg-white shadow-md">
       {/* 🔑 [수정] 제목 변경 및 전체 선수 수 표시 */}
       <h3 className="text-lg font-bold text-gray-700 flex items-center mb-3 border-b pb-2">
         <Users className="w-5 h-5 mr-2" /> 팀 선수 전체 목록 ({totalPlayers.length}명)
