@@ -44,6 +44,37 @@ export const useFormationDrag = () => {
     formationRef.current = currentFormation;
   }, [currentFormation]);
 
+  // ⭐️ [핵심 추가] 외부에서 포메이션 데이터를 받아 상태를 업데이트하는 함수
+  const loadFormation = useCallback((loadedPlacements) => {
+    // 🚨 훅 내부 UI ID(1~11)를 생성하여 부여합니다.
+    const newFormation = loadedPlacements.map((placement, index) => {
+      // 백엔드 데이터에 슬롯의 고유 키가 없으므로, UI 전용의 고유 ID(1~11)를 새로 부여합니다.
+      const uiId = index + 1;
+
+      const positionKey = findZoneKeyByCoordinates(placement.x, placement.y);
+
+      return {
+        ...placement, // dbPlayerId, name, backNumber 등 기존 DB 데이터 복사
+        id: uiId,
+
+        // 🚨 포지션 필드 업데이트
+        position: positionKey, // ⭐️ 좌표 기반의 상세 포지션으로 설정
+        posKey: positionKey, // ⭐️ posKey도 상세 포지션으로 통일
+
+        x: placement.x,
+        y: placement.y,
+      };
+    });
+
+    // 2. 상태 업데이트 및 isDirty 상태 초기화
+    setCurrentFormation(newFormation);
+    setIsDirty(false); // 로드했으므로 변경되지 않은 상태로 설정
+
+    formationRef.current = newFormation; // ref도 동기화
+
+    console.log('✅ 포메이션 로드 완료 (단순 덮어쓰기):', newFormation);
+  }, []); // 의존성 배열은 비워둡니다 (calculateInitialFormation이 불변이므로)
+
   // 2. 💡 [추가] 슬롯 클릭 및 배정 핸들러
   const handleSlotClick = useCallback((id, posKey) => {
     // ⚽️ [핵심 수정] 드래그 동작이 발생했다면 모달을 띄우지 않고 즉시 종료합니다.
@@ -66,10 +97,10 @@ export const useFormationDrag = () => {
         p.id === slotId
           ? {
               ...p,
-              dbPlayerId: player.id,
-              name: player.name,
-              backNumber: player.backNumber || player.number,
-              position: player.position,
+              dbPlayerId: player.id || null,
+              name: player.name || 'PLAYER',
+              backNumber: player.backNumber || player.number || '+',
+              //position: player.position, // 포지션은 변경하지 않음
               posKey: p.posKey,
             }
           : p
@@ -340,6 +371,7 @@ export const useFormationDrag = () => {
   // 8. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
   const resetFormation = useCallback(() => {
     setCurrentFormation(initialFormation); // ⚽️ [수정] 저장된 초기 상태로 리셋
+    setIsDirty(false); // 리셋했으므로 변경되지 않은 상태로 설정
   }, [initialFormation]);
 
   return {
@@ -354,5 +386,6 @@ export const useFormationDrag = () => {
     handleSlotClick,
     handleAssignPlayer,
     isDirty, // ⚽️ [추가] isDirty 상태를 외부로 노출
+    loadFormation, // ⭐️ [핵심 추가] 포메이션 불러오기 함수 노출
   };
 };

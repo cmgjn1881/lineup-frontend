@@ -35,15 +35,14 @@ class ApiClient {
           originalRequest._retry = true;
 
           const refreshToken = this.auth.refreshToken;
-          const oldAccessToken = this.auth.accessToken;
 
           if (refreshToken) {
             try {
-              // 토큰 재발급 요청 (refresh API 호출)
-              const refreshResponse = await this.client.post('/auth/refresh', {
-                // baseURL 사용
+              const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
+
+              const refreshResponse = await axios.post(refreshEndpoint, {
                 refreshToken: refreshToken,
-                oldAccessToken: oldAccessToken,
+                oldAccessToken: originalRequest.headers.Authorization?.replace('Bearer ', ''), // 이전 토큰은 config에서 가져올 수 있음
               });
 
               const {
@@ -63,6 +62,9 @@ class ApiClient {
               this.auth.logout();
               return Promise.reject(refreshError);
             }
+          } else {
+            // Refresh Token이 없으면 로그아웃 처리
+            this.auth.logout();
           }
         }
 
@@ -100,6 +102,13 @@ class ApiClient {
   createPlayer = (teamId, playerData) => this.client.post(`/teams/${teamId}/players`, playerData);
   updatePlayer = (teamId, playerId, playerData) => this.client.put(`/teams/${teamId}/players/${playerId}`, playerData);
   deletePlayer = (teamId, playerId) => this.client.delete(`/teams/${teamId}/players/${playerId}`);
+
+  // 포메이션 관리 API
+  saveTeamFormation = (formationData) => this.client.post(`/formation`, formationData);
+  updateFormation = (formationId, formationData) => this.client.put(`/formation/${formationId}`, formationData);
+  deleteFormation = (formationId) => this.client.delete(`/formation/${formationId}`);
+  getFormationList = (teamId) => this.client.get(`/formation`, { params: { teamId: teamId } });
+  getFormationDetail = (formationId) => this.client.get(`/formation/${formationId}`);
 }
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
@@ -108,6 +117,3 @@ export const useApiClient = () => {
   // authContext가 변경될 때만 새로운 인스턴스를 생성하도록 useMemo 사용
   return useMemo(() => new ApiClient(auth), [auth]);
 };
-
-// Custom Hook만 export하여 컴포넌트에서 사용
-// export default ApiClient; // 클래스 자체는 불필요
