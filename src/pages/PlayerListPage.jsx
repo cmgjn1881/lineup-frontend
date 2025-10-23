@@ -160,10 +160,31 @@ const PlayerListPage = ({ teamId }) => {
 
   const teamName = team.name || `팀 ID ${teamId}`;
   //const isEditMode = !!initialFormData?.id; // 수정 모드 여부
+  const playerCount = players.length;
+
+  // 포지션별 순서를 정의합니다.
+  const positionOrder = {
+    GK: 4,
+    DF: 3,
+    MF: 2,
+    FW: 1,
+    // 기타 포지션은 가장 뒤로
+  };
+
+  const sortedPlayers = [...players].sort((a, b) => {
+    const orderA = positionOrder[a.position] || 99;
+    const orderB = positionOrder[b.position] || 99;
+
+    return orderA - orderB; // 포지션 순서대로 오름차순 정렬
+  });
 
   return (
     <div className="p-4">
       <h2 className="text-3xl font-bold flex items-center mb-6 text-gray-800">{teamName}</h2>
+      <div className="flex items-center text-gray-600 mb-4">
+        <Users className="w-5 h-5 mr-2 text-indigo-500" />
+        <span className="text-lg">선수 목록 ({playerCount}명)</span>
+      </div>
 
       {/* ... (로딩/에러 메시지 유지) ... */}
       {loading && (
@@ -203,13 +224,13 @@ const PlayerListPage = ({ teamId }) => {
             {players.length === 0 ? (
               <p className="text-gray-500">등록된 선수가 없습니다.</p>
             ) : (
-              players.map((player) => (
+              sortedPlayers.map((player) => (
                 <React.Fragment key={player.playerId}>
                   <div className="bg-white p-4 border rounded-lg shadow-sm flex justify-between items-center">
                     {/* 선수 정보 */}
                     <div>
                       <p className="text-lg font-semibold">
-                        {player.name} ({player.position})
+                        {player.position} {player.name}
                       </p>
                       <p className="text-sm text-gray-500">등번호: {player.backNumber || player.number}</p>
                     </div>
