@@ -5,6 +5,7 @@ import axios from 'axios'; // 💡 axios를 직접 사용하기 위해 임포트
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api/ApiClient'; // 💡 API_BASE_URL 임포트
 
 const OAuthRedirectPage = () => {
   const location = useLocation();
@@ -23,7 +24,7 @@ const OAuthRedirectPage = () => {
         try {
           console.log('✅ 임시 토큰 추출 성공! 토큰 교환을 시도합니다.');
           // 2. 💡 [수정] 백엔드에 tempToken을 보내 실제 토큰들을 받아옵니다.
-          const response = await axios.post('/api/auth/token/exchange', { tempToken });
+          const response = await axios.post(`${API_BASE_URL}/auth/token/exchange`, { tempToken });
 
           // 3. 💡 [수정] 응답으로 받은 실제 토큰 정보로 로그인 처리를 위임합니다.
           const { accessToken, refreshToken, userId, username } = response.data;

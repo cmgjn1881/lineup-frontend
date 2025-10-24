@@ -4,8 +4,8 @@ import axios from 'axios';
 import { useContext, useMemo } from 'react';
 import { AuthContext } from '../context/AuthContextDefinition';
 
-const RENDER_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_BASE_URL = `${RENDER_BASE_URL}/api`;
+export const RENDER_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = `${RENDER_BASE_URL}/api`;
 
 // [핵심] Interceptor 설정이 포함된 API Client
 class ApiClient {
