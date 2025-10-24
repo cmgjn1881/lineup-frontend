@@ -1,9 +1,11 @@
 // src/pages/LoginPage.jsx
 
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // 💡 useNavigate 임포트
+import { useNavigate } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient'; // 분리된 클라이언트 임포트
 import { useAuth } from '../context/useAuth';
 import SignupForm from './SignupForm';
+import KakaoLoginButton from './KakaoLoginButton'; // 💡 카카오 로그인 버튼 임포트
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +15,7 @@ const LoginPage = () => {
 
   const api = useApiClient();
   const auth = useAuth(); // useAuth 훅 사용
+  const navigate = useNavigate(); // 💡 useNavigate 훅 사용
 
   const handleLogin = async (e) => {
     // 🔑 함수명을 handleLogin으로 변경
@@ -23,7 +26,8 @@ const LoginPage = () => {
       //console.log('로그인 응답 데이터:', res.data); // ✨ 로그인 응답 데이터 확인
       const { accessToken, refreshToken, email: userEmail, username: userName } = res.data; // ✨ username 받아오기
       auth.setTokens(accessToken, refreshToken, userEmail, userName); // ✨ setTokens에 userName 전달
-      window.location.hash = '#/teams'; // 화면 전환 명령
+      // 💡 [개선] window.location 대신 navigate 함수를 사용하여 페이지를 이동합니다.
+      navigate('/teams', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || '로그인 요청 처리 중 오류가 발생했습니다.');
     }
@@ -82,6 +86,11 @@ const LoginPage = () => {
       >
         계정이 없으신가요? 회원가입
       </button>
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <p className="text-center text-sm text-gray-500 mb-2">소셜 로그인</p>
+        {/* 💡 카카오 로그인 버튼 렌더링 */}
+        <KakaoLoginButton />
+      </div>
     </div>
   );
 };

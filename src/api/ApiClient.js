@@ -79,18 +79,7 @@ class ApiClient {
     return this.client.post('/auth/signup', { email, password, username, verificationCode });
   };
 
-  // 1. 이메일로 인증 코드 발송 요청 (POST /api/auth/send-code)
-  sendVerificationCode = (email) => {
-    return this.client.post('/auth/send-code', { email });
-  };
-
-  // 2. 인증 코드 확인 요청 (POST /api/auth/verify-code)
-  verifyCode = (email, verificationCode) => {
-    return this.client.post('/auth/verify-code', { email, verificationCode });
-  };
-
-  // 백엔드 로그아웃은 AuthProvider에서 axios 직접 사용 (순환 참조 방지)
-  getUserInfo = () => this.client.get('/auth/profile'); // ProfilePage에서 사용할 API 추가
+  getUserInfo = () => this.client.get(`/auth/info`);
 
   // 팀 관리 API
   createTeam = (name) => this.client.post('/teams', { name });
@@ -109,6 +98,12 @@ class ApiClient {
   deleteFormation = (formationId) => this.client.delete(`/formation/${formationId}`);
   getFormationList = (teamId) => this.client.get(`/formation`, { params: { teamId: teamId } });
   getFormationDetail = (formationId) => this.client.get(`/formation/${formationId}`);
+
+  // 💡 카카오 로그인 API
+  // 백엔드의 카카오 로그인 처리 엔드포인트로 GET 요청을 보냅니다.
+  // Spring Security를 사용한다면 '/login/oauth2/code/kakao'가 기본 경로일 수 있습니다.
+  // 백엔드 구현에 맞게 URL을 수정해주세요. (예: '/api/auth/kakao')
+  kakaoLogin = (code) => this.client.get(`/login/oauth2/code/kakao`, { params: { code } });
 }
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공

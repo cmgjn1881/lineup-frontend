@@ -24,12 +24,53 @@ export const AuthProvider = ({ children }) => {
     }
   }, [accessToken]);
 
+  // 🔑 [재사용 함수] 클라이언트 측 인증 데이터 초기화
+  const clearAuthData = useCallback(() => {
+    setAccessToken(null);
+    setRefreshToken(null);
+    setUserName(null); // ✨ userName 초기화
+    setUserEmail(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId'); // 💡 userId도 제거
+  }, []);
+
+  // 로그아웃 처리
+  const logout = useCallback(() => {
+    const currentAccess = localStorage.getItem('accessToken');
+    const currentRefresh = localStorage.getItem('refreshToken');
+
+    if (currentRefresh && currentAccess) {
+      // API 클라이언트가 아닌 axios를 직접 사용하여 순환 참조 방지
+      // 💡 [수정] 백엔드는 accessToken만 필요로 하므로, accessToken만 담아서 요청합니다.
+      // 💡 [수정] axios를 직접 사용하므로 Authorization 헤더를 수동으로 추가해야 합니다.
+      axios
+        .post(
+          '/api/auth/logout',
+          { accessToken: currentAccess },
+          {
+            headers: { Authorization: `Bearer ${currentAccess}` },
+          }
+        )
+        .catch((err) => {
+          console.error('백엔드 로그아웃 실패:', err);
+        });
+    }
+
+    // 클라이언트 측 토큰 삭제
+    clearAuthData();
+    alert('로그아웃되었습니다.');
+  }, [clearAuthData]);
+
   // 토큰 저장 및 상태 업데이트
   const setTokens = useCallback((newAccess, newRefresh, email, name) => {
     setAccessToken(newAccess);
     setRefreshToken(newRefresh);
     localStorage.setItem('accessToken', newAccess);
     localStorage.setItem('refreshToken', newRefresh);
+
     setIsAuthenticated(true);
 
     if (email) {
@@ -42,48 +83,52 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // 🔑 [재사용 함수] 클라이언트 측 인증 데이터 초기화
-  const clearAuthData = useCallback(() => {
-    setAccessToken(null);
-    setRefreshToken(null);
-    setUserName(null); // ✨ userName 초기화
-    setUserEmail(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userEmail');
-  }, []);
+  // 💡 [추가] 소셜 로그인 후 토큰과 userId로 로그인 처리하는 함수
+  //    ApiClient를 직접 사용하지 않고, axios를 사용하여 순환 참조를 방지합니다.
+  const loginWithToken = useCallback(
+    (accessToken, refreshToken, userId, username, navigate) => {
+      // 💡 [수정] username 파라미터 추가
+      try {
+        // 💡 [수정] 이제 모든 정보가 준비된 상태로 호출되므로, 바로 저장하고 인증 상태로 만듭니다.
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('userName', username);
 
-  // 로그아웃 처리
-  const logout = useCallback(() => {
-    const currentAccess = localStorage.getItem('accessToken');
-    const currentRefresh = localStorage.getItem('refreshToken');
+        setAccessToken(accessToken);
+        setRefreshToken(refreshToken);
+        setUserName(username);
+        setIsAuthenticated(true); // ⭐️ 모든 정보가 준비된 후 인증 상태로 변경
+        navigate('/teams', { replace: true }); // ⭐️ 모든 처리가 끝난 후 페이지 이동
+      } catch (error) {
+        console.error('소셜 로그인 사용자 정보 조회 실패:', error);
+        logout(); // 실패 시 모든 인증 정보 초기화
+      }
+    },
+    [logout] // setTokens는 더 이상 직접적인 의존성이 아님
+  );
 
-    if (currentRefresh && currentAccess) {
-      // API 클라이언트가 아닌 axios를 직접 사용하여 순환 참조 방지
-      axios.post('/api/auth/logout', { refreshToken: currentRefresh, accessToken: currentAccess }).catch((err) => {
-        console.error('백엔드 로그아웃 실패:', err);
-      });
-    }
-
-    // 클라이언트 측 토큰 삭제
-    clearAuthData();
-    alert('로그아웃되었습니다.');
-  }, [clearAuthData]);
-
-  // 🔑 [추가] 계정 탈퇴 처리
+  // � [추가] 계정 탈퇴 처리
   const withdraw = useCallback(async () => {
     const isConfirmed = window.confirm('정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.');
-    if (!isConfirmed) return;
+    if (!isConfirmed) {
+      return;
+    }
+
+    // 💡 [수정] 탈퇴 확인을 위해 비밀번호를 입력받습니다.
+    const password = window.prompt('계정 탈퇴를 위해 비밀번호를 입력해주세요.');
+    if (!password) {
+      alert('비밀번호가 입력되지 않아 탈퇴가 취소되었습니다.');
+      return;
+    }
 
     try {
       const currentAccess = localStorage.getItem('accessToken');
 
-      // Access Token을 헤더에 담아 탈퇴 API (DELETE) 호출 가정
+      // 💡 [수정] axios.delete 요청의 config 객체에 `data` 속성으로 비밀번호를 전달합니다.
       await axios.delete('/api/auth/withdraw', {
-        headers: {
-          Authorization: `Bearer ${currentAccess}`,
-        },
+        headers: { Authorization: `Bearer ${currentAccess}` },
+        data: { password: password }, // ⭐️ 요청 본문에 비밀번호 추가
       });
 
       // 서버 처리 성공 시: 클라이언트 상태 초기화 로직 재사용
@@ -108,10 +153,11 @@ export const AuthProvider = ({ children }) => {
       accessToken,
       refreshToken,
       setTokens,
+      loginWithToken, // 💡 새로 만든 함수를 context에 포함
       logout,
       withdraw,
     }),
-    [isAuthenticated, userEmail, userName, accessToken, refreshToken, setTokens, logout, withdraw]
+    [isAuthenticated, userEmail, userName, accessToken, refreshToken, setTokens, loginWithToken, logout, withdraw]
   );
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
