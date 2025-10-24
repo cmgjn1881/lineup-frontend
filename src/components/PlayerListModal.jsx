@@ -3,7 +3,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-// 🔑 [수정] 컴포넌트 이름을 PlayerListModal로 변경
 const PlayerListModal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 

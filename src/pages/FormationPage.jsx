@@ -10,7 +10,9 @@ import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
 import { useFormationDrag } from '../hooks/useFormationDrag'; // 🔑 useFormationDrag 훅 임포트
 import { useBlocker } from 'react-router-dom'; // ⚽️ [추가] React Router의 useBlocker 훅
-import { Users, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import FormationNameModal from '../components/FormationNameModal';
+import FormationLoadModal from '../components/FormationLoadModal';
+import PlayerDetailModal from '../components/PlayerDetailModal';
 
 const FormationPage = ({ teamId }) => {
   const location = useLocation();
@@ -281,6 +283,16 @@ const FormationPage = ({ teamId }) => {
     setLoadError(null);
   };
 
+  const handleClosePlayerDetailModal = () => {
+    setIsPlayerDetailModalOpen(false);
+    setSelectedPlayerSlot(null);
+  };
+
+  const handleCloseSaveModal = () => {
+    setIsSaveModalOpen(false);
+    setNewFormationName('');
+  };
+
   // ⭐️ [신규 구현] 할당된 선수 슬롯에서 선수 정보를 제거합니다.
   const handleRemovePlayerFromSlot = () => {
     if (!selectedPlayerSlot) return;
@@ -294,11 +306,6 @@ const FormationPage = ({ teamId }) => {
       // 나머지 필드는 훅이 알아서 처리하거나 빈 값으로 설정
     };
 
-    // 2. 훅의 handleAssignPlayer 함수를 사용하여 슬롯의 선수 정보를 null 값으로 덮어씁니다.
-    // handleAssignPlayer는 {id: slotId, player: {id: dbPlayerId, ...}} 형태를 기대합니다.
-
-    // 🚨 훅의 handleAssignPlayer가 기대하는 player 객체는 { id: dbPlayerId, ... } 이므로,
-    // 빈 슬롯을 만들기 위해서는 'id'가 null인 객체를 보내야 합니다.
     handleAssignPlayer(selectedPlayerSlot.id, emptyPlayer);
 
     alert(`선수 ${selectedPlayerSlot.name}을(를) 슬롯에서 제거했습니다.`);
@@ -308,7 +315,7 @@ const FormationPage = ({ teamId }) => {
     setIsPlayerDetailModalOpen(false);
   };
 
-  // ⭐️ [신규 구현] 선수 목록 모달을 다시 띄워 수정을 허용합니다.
+  // 선수 목록 모달을 다시 띄워 수정을 허용합니다.
   const handleModifyPlayer = () => {
     if (!selectedPlayerSlot) return;
 
@@ -320,6 +327,37 @@ const FormationPage = ({ teamId }) => {
     // activeSlot이 설정되고 PlayerListModal이 열립니다.
     handleSlotClick(selectedPlayerSlot.id, selectedPlayerSlot.posKey);
   };
+
+  // ⭐️ [추가] 정렬을 위한 포지션 순서 정의 (FW: 1, GK: 4)
+  const positionSortOrder = {
+    FW: 1,
+    MF: 2,
+    DF: 3,
+    GK: 4,
+    // 이외의 포지션은 가장 뒤로
+  };
+
+  // ⭐️ [핵심 추가] 현재 포메이션에 배정된 선수 ID 목록 생성
+  const assignedPlayerIds = currentFormation
+    .map((player) => player.dbPlayerId) // dbPlayerId 목록 추출
+    .filter((id) => id !== null); // null이 아닌 유효한 ID만 필터링
+
+  // ⭐️ [핵심 추가] 배정 가능한 선수 목록 생성
+  const availablePlayers = teamPlayers
+    .filter(
+      (player) => !assignedPlayerIds.includes(player.id) // player.id는 dbPlayerId와 동일
+    )
+    // ⭐️ [핵심 추가] 포지션 순서에 따라 정렬
+    .sort((a, b) => {
+      // a와 b 선수의 포지션 순서 값을 가져옵니다. (없으면 99로 밀어냄)
+      const orderA = positionSortOrder[a.position] || 99;
+      const orderB = positionSortOrder[b.position] || 99;
+
+      // 포지션 순서가 다르면 순서대로 정렬합니다. (1이 2보다 먼저 오도록)
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+    });
 
   return (
     <div className="p-0">
@@ -408,7 +446,7 @@ const FormationPage = ({ teamId }) => {
             title={`'${activeSlot.posKey}' 포지션 선수 배정`}
           >
             <PlayerListPanel
-              allPlayers={teamPlayers}
+              allPlayers={availablePlayers}
               loading={playersLoading}
               // 🔑 클릭된 선수를 activeSlot에 배정하는 함수 연결
               onPlayerClick={(player) => handleAssignPlayer(activeSlot.id, player)}
@@ -417,143 +455,32 @@ const FormationPage = ({ teamId }) => {
         )}
 
         {/* 포메이션 불러오기 모달 */}
-        {isLoadModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-[400px]">
-              <h3 className="text-xl font-bold mb-4 border-b pb-2">저장된 포메이션 불러오기</h3>
+        <FormationLoadModal
+          isOpen={isLoadModalOpen}
+          onClose={handleCloseLoadModal}
+          savedFormations={savedFormations}
+          onLoad={handleSelectFormation}
+          onDelete={handleDeleteFormation}
+          loadError={loadError}
+        />
 
-              {/* 오류 메시지 표시 */}
-              {loadError && <p className="text-red-500 mb-4">{loadError}</p>}
+        {/* 포메이션 이름 입력 모달 */}
+        <FormationNameModal
+          isOpen={isSaveModalOpen}
+          onClose={handleCloseSaveModal}
+          onConfirm={handleConfirmSave} // 저장 로직 연결
+          value={newFormationName}
+          onChange={(e) => setNewFormationName(e.target.value)}
+        />
 
-              {/* 포메이션 목록 표시 */}
-              <div className="max-h-80 overflow-y-auto">
-                {savedFormations.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">저장된 포메이션이 없습니다.</p>
-                ) : (
-                  savedFormations.map((formation) => (
-                    // 🚨 [수정]: flex를 사용하여 이름과 버튼을 분리
-                    <div
-                      key={formation.formationId}
-                      className="p-3 mb-2 border rounded-lg hover:bg-indigo-50 transition duration-150 flex justify-between items-center"
-                    >
-                      {/* 포메이션 이름/날짜 영역 (클릭 시 로드) */}
-                      <div
-                        onClick={() => handleSelectFormation(formation)} // 클릭 시 적용
-                        className="flex-grow cursor-pointer"
-                      >
-                        <p className="font-semibold text-gray-800">{formation.name}</p>
-                        <p className="text-sm text-gray-500">
-                          저장일: {new Date(formation.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-
-                      {/* 🚨 [신규 추가]: 삭제 버튼 */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // 부모 div의 handleSelectFormation 실행 방지
-                          handleDeleteFormation(formation.formationId, formation.name);
-                        }}
-                        className="ml-4 p-1 text-sm text-red-500 hover:bg-red-100 rounded-full transition duration-150 flex-shrink-0"
-                        aria-label="포메이션 삭제"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={handleCloseLoadModal}
-                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ⭐️ [추가] 포메이션 이름 입력 모달 */}
-        {isSaveModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-80">
-              <h3 className="text-xl font-bold mb-4">포메이션 이름 입력</h3>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-lg mb-4"
-                placeholder="예: 공격형 4-3-3"
-                value={newFormationName}
-                onChange={(e) => setNewFormationName(e.target.value)}
-              />
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setIsSaveModalOpen(false);
-                    setNewFormationName('');
-                  }}
-                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleConfirmSave}
-                  className="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  disabled={!newFormationName.trim()}
-                >
-                  저장
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ⭐️ [추가] 선수 상세 정보/수정/삭제 모달 */}
-        {isPlayerDetailModalOpen && selectedPlayerSlot && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-80">
-              <h3 className="text-xl font-bold mb-4 border-b pb-2">{selectedPlayerSlot.name} 선수 정보</h3>
-
-              {/* 선수 정보 표시 */}
-              <div className="mb-4 text-gray-700">
-                <p>
-                  <strong>포지션:</strong> {selectedPlayerSlot.posKey}
-                </p>
-                <p>
-                  <strong>등번호:</strong> {selectedPlayerSlot.backNumber}
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                {/* 1. 삭제 버튼 */}
-                <button
-                  onClick={handleRemovePlayerFromSlot}
-                  className="py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                >
-                  삭제
-                </button>
-                {/* 2. 수정 버튼 (선수 목록 모달로 연결) */}
-                <button
-                  onClick={handleModifyPlayer}
-                  className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                >
-                  수정
-                </button>
-                {/* 3. 취소 버튼 */}
-                <button
-                  onClick={() => {
-                    setIsPlayerDetailModalOpen(false);
-                    setSelectedPlayerSlot(null);
-                  }}
-                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 선수 상세 정보/수정/삭제 모달 */}
+        <PlayerDetailModal
+          isOpen={isPlayerDetailModalOpen}
+          onClose={handleClosePlayerDetailModal}
+          selectedSlot={selectedPlayerSlot}
+          onRemove={handleRemovePlayerFromSlot} // 삭제 로직 연결
+          onModify={handleModifyPlayer} // 수정 로직 연결
+        />
       </div>
     </div>
   );
