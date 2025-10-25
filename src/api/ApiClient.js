@@ -84,6 +84,9 @@ class ApiClient {
   // 팀 관리 API
   createTeam = (name) => this.client.post('/teams', { name });
   getTeams = () => this.client.get('/teams');
+  // 💡 [추가] 계정 탈퇴 API
+  withdraw = (password) => this.client.delete('/auth/withdraw', { data: { password } });
+
   deleteTeam = (teamId) => this.client.delete(`/teams/${teamId}`);
 
   // 선수 관리 API

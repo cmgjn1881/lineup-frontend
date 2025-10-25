@@ -6,6 +6,7 @@ export const AuthContext = createContext({
   isAuthenticated: false,
   userEmail: null,
   userName: null,
+  isSocial: false,
   accessToken: null,
   refreshToken: null,
   setTokens: () => {},

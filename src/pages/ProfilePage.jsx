@@ -23,8 +23,11 @@ const ProfilePage = () => {
           <span className="font-medium text-gray-800">{userName}</span>
         </div>
         <div className="flex justify-between items-center py-2">
-          <span className="text-gray-500">이메일</span>
-          <span className="font-medium text-gray-800">{userEmail}</span>
+          {/* 💡 [수정] 소셜 로그인 여부에 따라 표시 내용 변경 */}
+          <span className="text-gray-500">{auth.isSocial ? '로그인 방식' : '이메일'}</span>
+          <span className="font-medium text-gray-800">
+            {auth.isSocial ? <span className="text-yellow-600 font-bold">카카오 로그인</span> : userEmail}
+          </span>
         </div>
       </div>
 

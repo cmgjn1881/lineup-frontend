@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/ApiClient'; // 💡 API_BASE_URL 임포트
+import { useApiClient } from '../api/ApiClient'; // 💡 ApiClient 사용을 위해 임포트
 // 1. Context 정의를 별도 파일에서 임포트
 import { AuthContext } from './AuthContextDefinition';
 
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail'));
   const [userName, setUserName] = useState(localStorage.getItem('userName')); // ✨ userName 상태 추가
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'));
+  const [isSocial, setIsSocial] = useState(localStorage.getItem('isSocial') === 'true'); // 💡 소셜 로그인 여부 상태
   const [refreshToken, setRefreshToken] = useState(localStorage.getItem('refreshToken'));
 
   // 초기 로드 시 인증 상태 복원
@@ -20,6 +22,7 @@ export const AuthProvider = ({ children }) => {
       const storedEmail = localStorage.getItem('userEmail');
       const storedUserName = localStorage.getItem('userName'); // ✨ userName 불러오기
       if (storedEmail) setUserEmail(storedEmail);
+      if (localStorage.getItem('isSocial') === 'true') setIsSocial(true); // 💡 isSocial 상태 복원
       if (storedUserName) setUserName(storedUserName); // ✨ userName 상태 설정
       setIsAuthenticated(true);
     }
@@ -31,10 +34,12 @@ export const AuthProvider = ({ children }) => {
     setRefreshToken(null);
     setUserName(null); // ✨ userName 초기화
     setUserEmail(null);
+    setIsSocial(false); // 💡 isSocial 초기화
     setIsAuthenticated(false);
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('isSocial'); // 💡 isSocial 제거
     localStorage.removeItem('userId'); // 💡 userId도 제거
   }, []);
 
@@ -73,6 +78,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('refreshToken', newRefresh);
 
     setIsAuthenticated(true);
+    localStorage.setItem('isSocial', 'false'); // 💡 일반 로그인은 isSocial을 false로 저장
 
     if (email) {
       setUserEmail(email);
@@ -95,10 +101,12 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('userId', userId);
         localStorage.setItem('userName', username);
+        localStorage.setItem('isSocial', 'true'); // 💡 소셜 로그인은 isSocial을 true로 저장
 
         setAccessToken(accessToken);
         setRefreshToken(refreshToken);
         setUserName(username);
+        setIsSocial(true);
         setIsAuthenticated(true); // ⭐️ 모든 정보가 준비된 후 인증 상태로 변경
         navigate('/teams', { replace: true }); // ⭐️ 모든 처리가 끝난 후 페이지 이동
       } catch (error) {
@@ -110,37 +118,36 @@ export const AuthProvider = ({ children }) => {
   );
 
   // � [추가] 계정 탈퇴 처리
+  const api = useApiClient(); // 💡 ApiClient 인스턴스 생성
   const withdraw = useCallback(async () => {
     const isConfirmed = window.confirm('정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.');
     if (!isConfirmed) {
       return;
     }
 
-    // 💡 [수정] 탈퇴 확인을 위해 비밀번호를 입력받습니다.
-    const password = window.prompt('계정 탈퇴를 위해 비밀번호를 입력해주세요.');
-    if (!password) {
-      alert('비밀번호가 입력되지 않아 탈퇴가 취소되었습니다.');
-      return;
+    let password = '';
+    // 💡 [수정] 소셜 로그인 사용자가 아닌 경우에만 비밀번호를 입력받습니다.
+    if (!isSocial) {
+      password = window.prompt('계정 탈퇴를 위해 비밀번호를 입력해주세요.');
+      if (password === null) {
+        // 사용자가 '취소'를 누르면 null이 반환됩니다.
+        alert('탈퇴가 취소되었습니다.');
+        return;
+      }
     }
 
     try {
-      const currentAccess = localStorage.getItem('accessToken');
-
-      // 💡 [수정] axios.delete 요청의 config 객체에 `data` 속성으로 비밀번호를 전달합니다.
-      await axios.delete(`${API_BASE_URL}/auth/withdraw`, {
-        // 💡 [수정] API_BASE_URL 사용
-        headers: { Authorization: `Bearer ${currentAccess}` },
-        data: { password: password }, // ⭐️ 요청 본문에 비밀번호 추가
-      });
+      // 💡 [수정] ApiClient를 사용하여 토큰 만료 시 자동 재발급을 활용합니다.
+      await api.withdraw(password);
 
       // 서버 처리 성공 시: 클라이언트 상태 초기화 로직 재사용
       clearAuthData();
       alert('계정이 성공적으로 탈퇴되었습니다.');
     } catch (err) {
       console.error('계정 탈퇴 실패:', err);
+      // 💡 [수정] ApiClient의 인터셉터가 401을 처리하므로, 여기서는 logout()을 직접 호출할 필요가 없습니다.
       if (err.response?.status === 401 || err.response?.status === 403) {
-        alert('인증 정보가 만료되어 탈퇴 처리에 실패했습니다. 다시 로그인해 주세요.');
-        logout(); // 인증 실패 시 강제 로그아웃 (백엔드 로그아웃 로직 포함)
+        alert('인증 정보가 유효하지 않아 탈퇴 처리에 실패했습니다. 다시 로그인해 주세요.');
       } else {
         alert(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
       }
@@ -152,6 +159,7 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       userEmail,
       userName, // ✨ Context 값으로 전달
+      isSocial, // 💡 isSocial 값 전달
       accessToken,
       refreshToken,
       setTokens,
@@ -159,7 +167,18 @@ export const AuthProvider = ({ children }) => {
       logout,
       withdraw,
     }),
-    [isAuthenticated, userEmail, userName, accessToken, refreshToken, setTokens, loginWithToken, logout, withdraw]
+    [
+      isAuthenticated,
+      userEmail,
+      userName,
+      isSocial,
+      accessToken,
+      refreshToken,
+      setTokens,
+      loginWithToken,
+      logout,
+      withdraw,
+    ]
   );
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
