@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../api/ApiClient'; // 💡 API_BASE_URL 임포트
 // 1. Context 정의를 별도 파일에서 임포트
 import { AuthContext } from './AuthContextDefinition';
 
@@ -48,8 +49,8 @@ export const AuthProvider = ({ children }) => {
       // 💡 [수정] axios를 직접 사용하므로 Authorization 헤더를 수동으로 추가해야 합니다.
       axios
         .post(
-          '/api/auth/logout',
-          { accessToken: currentAccess },
+          `${API_BASE_URL}/auth/logout`, // 💡 [수정] API_BASE_URL 사용
+          {}, // 💡 [수정] 서버는 헤더에서 토큰을 읽으므로 요청 본문은 비워둡니다.
           {
             headers: { Authorization: `Bearer ${currentAccess}` },
           }
@@ -126,7 +127,8 @@ export const AuthProvider = ({ children }) => {
       const currentAccess = localStorage.getItem('accessToken');
 
       // 💡 [수정] axios.delete 요청의 config 객체에 `data` 속성으로 비밀번호를 전달합니다.
-      await axios.delete('/api/auth/withdraw', {
+      await axios.delete(`${API_BASE_URL}/auth/withdraw`, {
+        // 💡 [수정] API_BASE_URL 사용
         headers: { Authorization: `Bearer ${currentAccess}` },
         data: { password: password }, // ⭐️ 요청 본문에 비밀번호 추가
       });
