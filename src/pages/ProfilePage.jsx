@@ -35,7 +35,7 @@ const ProfilePage = () => {
       <div className="space-y-4 pt-4">
         {/* 1. 로그아웃 버튼 */}
         <button
-          onClick={auth.logout}
+          onClick={auth.logout} // 이제 이 함수가 카카오 로그아웃까지 모두 처리합니다.
           className="w-full flex items-center justify-center bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition duration-200"
         >
           <LogOut className="w-5 h-5 mr-2" />

@@ -44,31 +44,37 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // 로그아웃 처리
-  const logout = useCallback(() => {
-    const currentAccess = localStorage.getItem('accessToken');
-    const currentRefresh = localStorage.getItem('refreshToken');
+  const logout = useCallback(async () => {
+    const wasSocial = localStorage.getItem('isSocial') === 'true';
+    const accessToken = localStorage.getItem('accessToken');
 
-    if (currentRefresh && currentAccess) {
-      // API 클라이언트가 아닌 axios를 직접 사용하여 순환 참조 방지
-      // 💡 [수정] 백엔드는 accessToken만 필요로 하므로, accessToken만 담아서 요청합니다.
-      // 💡 [수정] axios를 직접 사용하므로 Authorization 헤더를 수동으로 추가해야 합니다.
-      axios
-        .post(
-          `${API_BASE_URL}/auth/logout`, // 💡 [수정] API_BASE_URL 사용
-          {}, // 💡 [수정] 서버는 헤더에서 토큰을 읽으므로 요청 본문은 비워둡니다.
-          {
-            headers: { Authorization: `Bearer ${currentAccess}` },
-          }
-        )
-        .catch((err) => {
-          console.error('백엔드 로그아웃 실패:', err);
-        });
+    // 1. 백엔드에 로그아웃 요청 (토큰이 있는 경우)
+    if (accessToken) {
+      try {
+        await axios.post(`${API_BASE_URL}/auth/logout`, {}, { headers: { Authorization: `Bearer ${accessToken}` } });
+      } catch (err) {
+        console.error('백엔드 로그아웃 요청 실패:', err);
+        // 실패하더라도 클라이언트 측 로그아웃은 계속 진행
+      }
     }
 
-    // 클라이언트 측 토큰 삭제
+    // 2. 클라이언트 측 인증 정보 초기화
     clearAuthData();
     alert('로그아웃되었습니다.');
-  }, [clearAuthData]);
+
+    // 3. 카카오 로그인 사용자였을 경우, 카카오 세션도 로그아웃
+    if (wasSocial) {
+      const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+      const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 로그아웃 후 돌아갈 메인 페이지
+
+      // 페이지를 카카오 로그아웃 URL로 이동시킵니다.
+      window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
+    } else {
+      // 일반 로그인의 경우, 메인 페이지로 이동
+      // (이미 ProtectedRoute에 의해 로그인 페이지로 리다이렉트되므로 이 코드는 선택사항)
+      window.location.href = '/';
+    }
+  }, [clearAuthData]); // API_BASE_URL은 불변이므로 의존성 배열에서 제외 가능
 
   // 토큰 저장 및 상태 업데이트
   const setTokens = useCallback((newAccess, newRefresh, email, name) => {
