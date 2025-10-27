@@ -8,11 +8,11 @@ const KakaoLoginButton = () => {
     // 이렇게 하면 개발 환경(localhost)과 배포 환경(Vercel) 모두에서 올바르게 동작합니다.
     const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
     // window.location.origin은 "https://<도메인>" 또는 "http://localhost:5173" 등을 반환합니다.
-    // HashRouter를 사용하므로 콜백 경로는 '/#/kakao/callback' 입니다.
-    const KAKAO_REDIRECT_URI = `${window.location.origin}/#/kakao/callback`;
+    // 💡 [수정] public 폴더의 kakao-redirect.html을 리다이렉트 URI로 지정합니다.
+    const KAKAO_REDIRECT_URI = `${window.location.origin}/kakao-redirect.html`;
 
-    // 💡 [수정] 동적으로 생성된 KAKAO_REDIRECT_URI를 사용합니다.
-    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
+    // 💡 [수정] response_type 파라미터 중복 제거
+    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}`;
     window.location.href = KAKAO_AUTH_URL;
   };
 

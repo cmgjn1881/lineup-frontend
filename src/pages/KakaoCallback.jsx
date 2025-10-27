@@ -19,12 +19,19 @@ const KakaoCallback = () => {
       // 💡 [오류 수정] getKakaoToken, loginToServer 함수를 useEffect 내부로 이동하여
       //    의존성 문제를 해결하고 코드를 더 안정적으로 만듭니다.
 
-      // 1. URL에서 인가 코드(code)를 추출합니다.
-      const code = new URLSearchParams(location.search).get('code');
+      // 💡 [수정] 1. URL 쿼리 대신 localStorage에서 인가 코드를 가져옵니다.
+      const code = localStorage.getItem('kakao-code');
+      const kakaoError = localStorage.getItem('kakao-error');
+
+      // 사용한 코드는 즉시 삭제하여 보안을 강화합니다.
+      localStorage.removeItem('kakao-code');
+      localStorage.removeItem('kakao-error');
 
       if (!code) {
-        setError('카카오 인증에 실패했습니다. (인가 코드가 없음)');
-        console.error('카카오로부터 인가 코드를 받아오지 못했습니다.');
+        const parsedError = kakaoError ? JSON.parse(kakaoError) : {};
+        const errorMessage = parsedError.error_description || '카카오 인증에 실패했습니다. (인가 코드가 없음)';
+        setError(errorMessage);
+        console.error('카카오로부터 인가 코드를 받아오지 못했습니다.', parsedError);
         return;
       }
 
@@ -33,8 +40,8 @@ const KakaoCallback = () => {
         const getKakaoToken = async (code) => {
           const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
           // 💡 [수정] KakaoLoginButton과 동일하게 redirect_uri를 동적으로 생성합니다.
-          // 이 값은 카카오에 토큰을 요청할 때, 첫 단계(로그인 버튼 클릭)에서 사용한 redirect_uri와 일치해야 합니다.
-          const KAKAO_REDIRECT_URI = `${window.location.origin}/#/kakao/callback`;
+          // 토큰 요청 시에도 로그인 요청 때와 동일한 redirect_uri를 사용해야 합니다.
+          const KAKAO_REDIRECT_URI = `${window.location.origin}/kakao-redirect.html`;
 
           const response = await axios.post(
             'https://kauth.kakao.com/oauth/token',
