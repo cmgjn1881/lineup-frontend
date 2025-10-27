@@ -30,8 +30,16 @@ const OAuthRedirectPage = () => {
           const { accessToken, refreshToken, userId, username } = response.data;
           auth.loginWithToken(accessToken, refreshToken, userId, username, navigate);
         } catch (error) {
-          console.error('토큰 교환 실패:', error);
-          alert('로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+          // 💡 [수정] 네트워크 에러와 일반 에러를 구분하여 사용자에게 더 친절한 안내를 제공합니다.
+          if (error.response) {
+            // 서버가 응답했지만, 에러 코드를 반환한 경우 (예: 유효하지 않은 토큰)
+            console.error('토큰 교환 실패 (서버 응답 오류):', error.response.data);
+            alert(error.response.data.message || '로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+          } else {
+            // 서버에 연결조차 되지 않은 경우 (네트워크 오류, 서버 다운 등)
+            console.error('토큰 교환 실패 (네트워크 오류):', error.message);
+            alert('서버에 연결할 수 없습니다. 서버가 점검 중일 수 있으니 잠시 후 다시 시도해주세요.');
+          }
           navigate('/', { replace: true });
         }
       } else {

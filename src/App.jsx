@@ -10,8 +10,8 @@ import TeamDetailPage from './pages/TeamDetailPage'; // 새로운 컴포넌트 �
 import PlayerListPage from './pages/PlayerListPage'; // 새로운 컴포넌트 임포트
 import ProfilePage from './pages/ProfilePage';
 import FormationPage from './pages/FormationPage';
-import ScrollToTop from './components/ScrollToTop';
-import OAuthRedirectPage from './pages/OAuthRedirectPage'; // 💡 새로 만든 리다이렉트 페이지 임포트
+import ScrollToTop from './components/ScrollToTop'; // 💡 OAuthRedirectPage 임포트 제거
+import KakaoCallback from './pages/KakaoCallback'; // 💡 KakaoCallback 임포트
 import { User, Briefcase, Shield } from 'lucide-react';
 
 // =================================================================================
@@ -173,11 +173,10 @@ const router = createHashRouter([
     path: '/',
     element: <AuthRedirect />,
   },
-  // 💡 [수정] 소셜 로그인 리다이렉트 경로는 인증 상태와 관계없이 접근 가능해야 하므로
-  //    독립적인 최상위 라우트로 분리합니다.
+  // 💡 [수정] 카카오 로그인 콜백 처리를 위한 라우트
   {
-    path: '/oauth/redirect',
-    element: <OAuthRedirectPage />,
+    path: '/kakao/callback',
+    element: <KakaoCallback />,
   },
   {
     path: '/',

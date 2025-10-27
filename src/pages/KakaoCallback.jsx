@@ -1,6 +1,7 @@
 // src/pages/KakaoCallback.jsx (새 파일)
 
 import React, { useEffect, useState } from 'react';
+import axios from 'axios'; // 💡 카카오와 직접 통신하기 위해 axios를 임포트합니다.
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
@@ -15,36 +16,78 @@ const KakaoCallback = () => {
 
   useEffect(() => {
     const processKakaoLogin = async () => {
+      // 💡 [오류 수정] getKakaoToken, loginToServer 함수를 useEffect 내부로 이동하여
+      //    의존성 문제를 해결하고 코드를 더 안정적으로 만듭니다.
+
       // 1. URL에서 인가 코드(code)를 추출합니다.
       const code = new URLSearchParams(location.search).get('code');
 
       if (!code) {
         setError('카카오 인증에 실패했습니다. (인가 코드가 없음)');
-        console.error('인가 코드를 받아오지 못했습니다.');
+        console.error('카카오로부터 인가 코드를 받아오지 못했습니다.');
         return;
       }
 
       try {
-        // 2. 백엔드에 인가 코드를 보내 토큰을 요청합니다.
-        // 💡 백엔드의 카카오 로그인 처리 API 엔드포인트를 호출합니다.
-        //    (예: /api/auth/kakao, /login/oauth2/code/kakao 등)
-        const res = await api.kakaoLogin(code); // ApiClient에 kakaoLogin 함수 추가 필요
+        // 1-1. 인가 코드로 카카오 토큰을 요청하는 함수
+        const getKakaoToken = async (code) => {
+          const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+          const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI;
 
-        // 3. 백엔드로부터 받은 토큰(우리 서비스의 토큰)을 저장하고 로그인 처리합니다.
-        const { accessToken, refreshToken, email: userEmail, username: userName } = res.data;
-        auth.setTokens(accessToken, refreshToken, userEmail, userName);
+          const response = await axios.post(
+            'https://kauth.kakao.com/oauth/token',
+            new URLSearchParams({
+              grant_type: 'authorization_code',
+              client_id: KAKAO_CLIENT_ID,
+              redirect_uri: KAKAO_REDIRECT_URI,
+              code: code,
+            }),
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+              },
+            }
+          );
 
-        // 4. 로그인 성공 후 메인 페이지로 이동합니다.
-        navigate('/teams');
+          const kakaoAccessToken = response.data.access_token;
+          if (!kakaoAccessToken) {
+            throw new Error('카카오 엑세스 토큰 발급에 실패했습니다.');
+          }
+          return kakaoAccessToken;
+        };
+
+        // 1-2. 카카오 토큰으로 우리 서버에 로그인하는 함수
+        const loginToServer = async (kakaoAccessToken) => {
+          const serverResponse = await api.socialLogin('kakao', kakaoAccessToken);
+          const { accessToken, refreshToken, userId, username } = serverResponse.data;
+
+          // auth.loginWithToken은 성공 시 페이지 이동까지 책임짐
+          auth.loginWithToken(accessToken, refreshToken, userId, username, navigate);
+        };
+
+        // 💡 [개선] 추상화된 함수를 순서대로 호출
+        const kakaoAccessToken = await getKakaoToken(code);
+        await loginToServer(kakaoAccessToken);
       } catch (err) {
-        // 💡 여기서 백엔드로부터 받은 에러 메시지를 확인할 수 있습니다.
-        console.error('카카오 로그인 처리 중 오류:', err);
-        setError(err.response?.data?.message || '카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        // 💡 에러 핸들링 강화
+        if (err.response) {
+          // 서버(카카오 또는 우리 서버)에서 에러 응답을 보낸 경우
+          console.error('카카오 로그인 처리 중 서버 오류:', err.response.data);
+          setError(
+            err.response.data.error_description ||
+              err.response.data.message ||
+              '로그인 처리 중 서버에서 오류가 발생했습니다.'
+          );
+        } else {
+          // 네트워크 오류 등
+          console.error('카카오 로그인 처리 중 네트워크 오류:', err.message);
+          setError('카카오 로그인에 실패했습니다. 네트워크 연결을 확인해주세요.');
+        }
       }
     };
 
     processKakaoLogin();
-  }, [location, api, auth, navigate]); // 💡 의존성 배열 순서를 조정하고, navigate의 역할을 명확히 합니다. (현재 구조에서는 큰 문제 없음)
+  }, [location, api, auth, navigate]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">

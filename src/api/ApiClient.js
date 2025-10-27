@@ -102,11 +102,9 @@ class ApiClient {
   getFormationList = (teamId) => this.client.get(`/formation`, { params: { teamId: teamId } });
   getFormationDetail = (formationId) => this.client.get(`/formation/${formationId}`);
 
-  // 💡 카카오 로그인 API
-  // 백엔드의 카카오 로그인 처리 엔드포인트로 GET 요청을 보냅니다.
-  // Spring Security를 사용한다면 '/login/oauth2/code/kakao'가 기본 경로일 수 있습니다.
-  // 백엔드 구현에 맞게 URL을 수정해주세요. (예: '/api/auth/kakao')
-  kakaoLogin = (code) => this.client.get(`/login/oauth2/code/kakao`, { params: { code } });
+  // 💡 [수정] 소셜 로그인 API
+  // provider(e.g., 'kakao')와 소셜 엑세스 토큰을 백엔드로 보내 서비스 토큰을 요청합니다.
+  socialLogin = (provider, accessToken) => this.client.post(`/auth/social-login`, { provider, accessToken });
 }
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
