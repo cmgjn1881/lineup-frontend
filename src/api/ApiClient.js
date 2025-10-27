@@ -40,10 +40,19 @@ class ApiClient {
             try {
               const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
 
-              const refreshResponse = await axios.post(refreshEndpoint, {
-                refreshToken: refreshToken,
-                oldAccessToken: originalRequest.headers.Authorization?.replace('Bearer ', ''), // 이전 토큰은 config에서 가져올 수 있음
-              });
+              // 💡 [수정] 서버 요구사항에 맞게 토큰을 커스텀 헤더에 담아 전송합니다.
+              const oldAccessToken = originalRequest.headers.Authorization?.replace('Bearer ', '');
+
+              const refreshResponse = await axios.post(
+                refreshEndpoint,
+                {}, // 요청 본문은 비워둡니다.
+                {
+                  headers: {
+                    'X-Access-Token': oldAccessToken,
+                    'X-Refresh-Token': refreshToken,
+                  },
+                }
+              );
 
               const {
                 accessToken: newAccessToken,
@@ -59,12 +68,12 @@ class ApiClient {
               return this.client(originalRequest);
             } catch (refreshError) {
               // Refresh Token 만료 시 로그아웃 처리
-              this.auth.logout();
+              this.auth.logout('session_expired'); // 💡 로그아웃 사유 전달
               return Promise.reject(refreshError);
             }
           } else {
             // Refresh Token이 없으면 로그아웃 처리
-            this.auth.logout();
+            this.auth.logout('session_expired'); // 💡 로그아웃 사유 전달
           }
         }
 

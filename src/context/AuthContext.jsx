@@ -40,41 +40,52 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isSocial'); // 💡 isSocial 제거
+    localStorage.removeItem('userName'); // 💡 userName 제거
     localStorage.removeItem('userId'); // 💡 userId도 제거
   }, []);
 
   // 로그아웃 처리
-  const logout = useCallback(async () => {
-    const wasSocial = localStorage.getItem('isSocial') === 'true';
-    const accessToken = localStorage.getItem('accessToken');
+  const logout = useCallback(
+    async (reason) => {
+      const wasSocial = localStorage.getItem('isSocial') === 'true';
+      const accessToken = localStorage.getItem('accessToken');
 
-    // 1. 백엔드에 로그아웃 요청 (토큰이 있는 경우)
-    if (accessToken) {
-      try {
-        await axios.post(`${API_BASE_URL}/auth/logout`, {}, { headers: { Authorization: `Bearer ${accessToken}` } });
-      } catch (err) {
-        console.error('백엔드 로그아웃 요청 실패:', err);
-        // 실패하더라도 클라이언트 측 로그아웃은 계속 진행
+      // 1. 백엔드에 로그아웃 요청 (토큰이 있는 경우)
+      // 💡 [개선] 사용자가 직접 로그아웃 버튼을 눌렀을 때만 서버에 요청
+      if (accessToken && reason === 'user') {
+        try {
+          await axios.post(`${API_BASE_URL}/auth/logout`, {}, { headers: { Authorization: `Bearer ${accessToken}` } });
+        } catch (err) {
+          console.error('백엔드 로그아웃 요청 실패:', err);
+          // 실패하더라도 클라이언트 측 로그아웃은 계속 진행
+        }
       }
-    }
 
-    // 2. 클라이언트 측 인증 정보 초기화
-    clearAuthData();
-    alert('로그아웃되었습니다.');
+      // 2. 클라이언트 측 인증 정보 초기화
+      clearAuthData();
 
-    // 3. 카카오 로그인 사용자였을 경우, 카카오 세션도 로그아웃
-    if (wasSocial) {
-      const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-      const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 로그아웃 후 돌아갈 메인 페이지
+      // 💡 [개선] 로그아웃 사유에 따라 다른 메시지를 표시합니다.
+      if (reason === 'session_expired') {
+        alert('세션이 만료되어 자동으로 로그아웃되었습니다. 다시 로그인해주세요.');
+      } else {
+        alert('로그아웃되었습니다.');
+      }
 
-      // 페이지를 카카오 로그아웃 URL로 이동시킵니다.
-      window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
-    } else {
-      // 일반 로그인의 경우, 메인 페이지로 이동
-      // (이미 ProtectedRoute에 의해 로그인 페이지로 리다이렉트되므로 이 코드는 선택사항)
-      window.location.href = '/';
-    }
-  }, [clearAuthData]); // API_BASE_URL은 불변이므로 의존성 배열에서 제외 가능
+      // 3. 카카오 로그인 사용자였을 경우, 카카오 세션도 로그아웃
+      if (wasSocial) {
+        const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+        const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 로그아웃 후 돌아갈 메인 페이지
+
+        // 페이지를 카카오 로그아웃 URL로 이동시킵니다.
+        window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
+      } else {
+        // 일반 로그인의 경우, 메인 페이지로 이동
+        // (이미 ProtectedRoute에 의해 로그인 페이지로 리다이렉트되므로 이 코드는 선택사항)
+        window.location.href = '/';
+      }
+    },
+    [clearAuthData]
+  );
 
   // 토큰 저장 및 상태 업데이트
   const setTokens = useCallback((newAccess, newRefresh, email, name) => {
@@ -144,11 +155,21 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // 💡 [수정] ApiClient를 사용하여 토큰 만료 시 자동 재발급을 활용합니다.
-      await api.withdraw(password);
+      // 💡 [수정] isSocial 값에 따라 password 전달
+      await api.withdraw(isSocial ? '' : password);
 
-      // 서버 처리 성공 시: 클라이언트 상태 초기화 로직 재사용
-      clearAuthData();
+      // 서버 처리 성공 시:
       alert('계정이 성공적으로 탈퇴되었습니다.');
+
+      // 💡 [개선] 소셜 로그인 사용자의 경우, 카카오와 연결도 끊습니다.
+      if (isSocial) {
+        const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+        const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 연결 해제 후 돌아올 메인 페이지
+        window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
+      } else {
+        // 일반 사용자는 클라이언트 데이터만 정리
+        clearAuthData();
+      }
     } catch (err) {
       console.error('계정 탈퇴 실패:', err);
       // 💡 [수정] ApiClient의 인터셉터가 401을 처리하므로, 여기서는 logout()을 직접 호출할 필요가 없습니다.
@@ -158,7 +179,7 @@ export const AuthProvider = ({ children }) => {
         alert(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
       }
     }
-  }, [clearAuthData, logout]);
+  }, [api, isSocial, clearAuthData]); // 💡 의존성 배열 업데이트
 
   const authContextValue = useMemo(
     () => ({
