@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios'; // 💡 카카오와 직접 통신하기 위해 axios를 임포트합니다.
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
 import { Loader2 } from 'lucide-react';
 
 const KakaoCallback = () => {
-  const location = useLocation();
+  //const location = useLocation();
   const navigate = useNavigate();
   const api = useApiClient();
   const auth = useAuth();
@@ -96,7 +96,11 @@ const KakaoCallback = () => {
     };
 
     processKakaoLogin();
-  }, [location, api, auth, navigate]);
+    // 💡 [수정] 의존성 배열을 비워서 이 useEffect가 컴포넌트 마운트 시
+    //    단 한 번만 실행되도록 보장합니다. 이렇게 하면 불필요한 재실행으로 인해
+    //    localStorage에서 이미 삭제된 코드를 다시 읽으려는 시도를 막을 수 있습니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">
