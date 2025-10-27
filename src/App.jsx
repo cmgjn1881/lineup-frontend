@@ -171,46 +171,65 @@ const AppContent = () => {
 const router = createHashRouter([
   {
     path: '/',
-    element: <AuthRedirect />,
-  },
-  // 💡 [수정] 카카오 로그인 콜백 처리를 위한 라우트
-  {
-    path: '/kakao/callback',
-    element: <KakaoCallback />,
-  },
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute>
-        <AppContent />
-      </ProtectedRoute>
-    ),
+    // 💡 [수정] AppContent를 모든 페이지의 공통 레이아웃으로 사용하고, 그 안에 자식 라우트를 정의합니다.
+    element: <AppContent />,
     children: [
+      // 1. 인증이 필요 없는 공용 라우트
+      {
+        index: true, // '/' 경로에 해당
+        element: <AuthRedirect />,
+      },
+      {
+        path: 'kakao/callback',
+        element: <KakaoCallback />,
+      },
+      // 2. 인증이 필요한 보호된 라우트 (각각 ProtectedRoute로 감싸줍니다)
       {
         path: 'teams',
-        element: <TeamPage />,
+        element: (
+          <ProtectedRoute>
+            <TeamPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'teams/:teamId',
-        element: <TeamDetailWrapper />,
+        element: (
+          <ProtectedRoute>
+            <TeamDetailWrapper />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'teams/:teamId/players',
-        element: <PlayerListWrapper />,
+        element: (
+          <ProtectedRoute>
+            <PlayerListWrapper />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'teams/:teamId/formation',
-        element: <FormationWrapper />,
+        element: (
+          <ProtectedRoute>
+            <FormationWrapper />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'profile',
-        element: <ProfilePage />,
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      // 3. 일치하는 라우트가 없을 경우 처리
+      {
+        path: '*',
+        element: <Navigate to="/teams" replace />,
       },
     ],
-  },
-  {
-    path: '*',
-    element: <Navigate to="/teams" replace />,
   },
 ]);
 
