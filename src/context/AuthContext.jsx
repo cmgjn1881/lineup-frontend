@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   // 로그아웃 처리
   const logout = useCallback(
     async (reason) => {
-      const wasSocial = localStorage.getItem('isSocial') === 'true';
+      //const wasSocial = localStorage.getItem('isSocial') === 'true';
       const accessToken = localStorage.getItem('accessToken');
 
       // 1. 백엔드에 로그아웃 요청 (토큰이 있는 경우)
@@ -72,17 +72,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       // 3. 카카오 로그인 사용자였을 경우, 카카오 세션도 로그아웃
-      if (wasSocial) {
-        const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-        const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 로그아웃 후 돌아갈 메인 페이지
-
-        // 페이지를 카카오 로그아웃 URL로 이동시킵니다.
-        window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
-      } else {
-        // 일반 로그인의 경우, 메인 페이지로 이동
-        // (이미 ProtectedRoute에 의해 로그인 페이지로 리다이렉트되므로 이 코드는 선택사항)
-        window.location.href = '/';
-      }
+      // 💡 [개선] 카카오 로그아웃 페이지를 거치지 않고, 바로 우리 서비스의 메인 페이지로 이동합니다.
+      // 이렇게 하면 사용자는 다른 카카오 서비스의 로그인 상태를 유지할 수 있습니다.
+      window.location.href = '/';
     },
     [clearAuthData]
   );
@@ -161,14 +153,14 @@ export const AuthProvider = ({ children }) => {
       // 서버 처리 성공 시:
       alert('계정이 성공적으로 탈퇴되었습니다.');
 
+      // 💡 [개선] 사용자 종류와 관계없이 클라이언트 데이터를 먼저 정리합니다.
+      clearAuthData();
+
       // 💡 [개선] 소셜 로그인 사용자의 경우, 카카오와 연결도 끊습니다.
       if (isSocial) {
         const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
         const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 연결 해제 후 돌아올 메인 페이지
         window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
-      } else {
-        // 일반 사용자는 클라이언트 데이터만 정리
-        clearAuthData();
       }
     } catch (err) {
       console.error('계정 탈퇴 실패:', err);
