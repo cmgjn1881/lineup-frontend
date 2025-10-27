@@ -4,11 +4,14 @@ import React from 'react';
 
 const KakaoLoginButton = () => {
   const handleKakaoLogin = () => {
-    // 💡 [오류 수정] 버튼 클릭 시점에 환경 변수를 읽어 URL을 생성합니다.
-    // 이렇게 하면 환경 변수가 로드되지 않는 문제를 방지할 수 있습니다.
+    // 💡 [오류 수정] 하드코딩된 redirect_uri 대신, 현재 window.location을 기반으로 동적으로 생성합니다.
+    // 이렇게 하면 개발 환경(localhost)과 배포 환경(Vercel) 모두에서 올바르게 동작합니다.
     const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-    const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+    // window.location.origin은 "https://<도메인>" 또는 "http://localhost:5173" 등을 반환합니다.
+    // HashRouter를 사용하므로 콜백 경로는 '/#/kakao/callback' 입니다.
+    const KAKAO_REDIRECT_URI = `${window.location.origin}/#/kakao/callback`;
 
+    // 💡 [수정] 동적으로 생성된 KAKAO_REDIRECT_URI를 사용합니다.
     const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
     window.location.href = KAKAO_AUTH_URL;
   };

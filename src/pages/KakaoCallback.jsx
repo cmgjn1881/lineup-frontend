@@ -32,7 +32,9 @@ const KakaoCallback = () => {
         // 1-1. 인가 코드로 카카오 토큰을 요청하는 함수
         const getKakaoToken = async (code) => {
           const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-          const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+          // 💡 [수정] KakaoLoginButton과 동일하게 redirect_uri를 동적으로 생성합니다.
+          // 이 값은 카카오에 토큰을 요청할 때, 첫 단계에서 사용한 redirect_uri와 일치해야 합니다.
+          const KAKAO_REDIRECT_URI = `${window.location.origin}/#/kakao/callback`;
 
           const response = await axios.post(
             'https://kauth.kakao.com/oauth/token',
