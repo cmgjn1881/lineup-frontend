@@ -3,14 +3,13 @@
 import React from 'react';
 
 const KakaoLoginButton = () => {
-  // 💡 [수정] 프론트엔드에서 직접 카카오 인증을 요청합니다.
-  const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-  // 💡 [개선] .env 파일에서 Redirect URI를 가져옵니다.
-  const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI;
-
-  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
-
   const handleKakaoLogin = () => {
+    // 💡 [오류 수정] 버튼 클릭 시점에 환경 변수를 읽어 URL을 생성합니다.
+    // 이렇게 하면 환경 변수가 로드되지 않는 문제를 방지할 수 있습니다.
+    const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
+    const KAKAO_REDIRECT_URI = import.meta.env.VITE_KAKAO_REDIRECT_URI;
+
+    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
     window.location.href = KAKAO_AUTH_URL;
   };
 
