@@ -12,7 +12,7 @@ const KakaoLoginButton = () => {
     const KAKAO_REDIRECT_URI = `${window.location.origin}/#/kakao/callback`;
 
     // 💡 [수정] 동적으로 생성된 KAKAO_REDIRECT_URI를 사용합니다.
-    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
+    const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${KAKAO_CLIENT_ID}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code`;
     window.location.href = KAKAO_AUTH_URL;
   };
 
