@@ -138,6 +138,6 @@ export const useApiClient = () => {
   return useMemo(
     () => new ApiClient(auth),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.accessToken, auth.refreshToken, auth.setTokens, auth.logout]
+    [auth.accessToken, auth.refreshToken, auth.setTokens, auth.logout, auth.isSocial, auth.clearAuthData]
   );
 };
