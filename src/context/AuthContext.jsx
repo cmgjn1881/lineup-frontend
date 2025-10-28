@@ -126,8 +126,9 @@ export const AuthProvider = ({ children }) => {
     [logout] // setTokens는 더 이상 직접적인 의존성이 아님
   );
 
-  // � [추가] 계정 탈퇴 처리
-  const api = useApiClient(); // 💡 ApiClient 인스턴스 생성
+  const api = useApiClient(); // 💡 [수정] useApiClient를 AuthProvider 컴포넌트 최상위 레벨에서 호출
+
+  // 계정 탈퇴 처리 (useCallback의 의존성 배열에 api 추가)
   const withdraw = useCallback(async () => {
     const isConfirmed = window.confirm('정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.');
     if (!isConfirmed) {
@@ -148,7 +149,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // 💡 [수정] ApiClient를 사용하여 토큰 만료 시 자동 재발급을 활용합니다.
       // 💡 [수정] isSocial 값에 따라 password 전달
-      await api.withdraw(isSocial ? '' : password);
+      await api.withdraw(isSocial ? null : password);
 
       // 서버 처리 성공 시:
       alert('계정이 성공적으로 탈퇴되었습니다.');
@@ -169,7 +170,7 @@ export const AuthProvider = ({ children }) => {
         alert(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
       }
     }
-  }, [api, isSocial, clearAuthData]); // 💡 의존성 배열 업데이트
+  }, [api, isSocial, clearAuthData]); // 💡 [수정] api를 의존성 배열에 추가
 
   const authContextValue = useMemo(
     () => ({

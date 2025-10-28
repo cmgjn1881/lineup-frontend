@@ -95,7 +95,9 @@ class ApiClient {
   createTeam = (name) => this.client.post('/teams', { name });
   getTeams = () => this.client.get('/teams');
   // 💡 [추가] 계정 탈퇴 API
-  withdraw = (password) => this.client.delete('/auth/withdraw', { data: { password } });
+  // 💡 [수정] password가 falsy(null, '') 값일 경우 data 객체에서 제외합니다.
+  // 이렇게 하면 소셜 로그인 사용자의 탈퇴 요청 시 불필요한 password 필드가 전송되지 않습니다.
+  withdraw = (password) => this.client.delete('/auth/withdraw', { data: password ? { password } : {} });
 
   deleteTeam = (teamId) => this.client.delete(`/teams/${teamId}`);
 
