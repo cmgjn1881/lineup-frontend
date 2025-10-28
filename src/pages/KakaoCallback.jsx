@@ -70,8 +70,8 @@ const KakaoCallback = () => {
           const serverResponse = await api.socialLogin('kakao', kakaoAccessToken);
           const { accessToken, refreshToken, userId, username } = serverResponse.data;
 
-          // auth.loginWithToken은 성공 시 페이지 이동까지 책임짐
-          auth.loginWithToken(accessToken, refreshToken, userId, username, navigate);
+          // 💡 [수정] localStorage에 토큰을 저장하고, AuthContext의 useEffect가 페이지 이동을 처리하도록 합니다.
+          auth.loginWithToken(accessToken, refreshToken, userId, username);
         };
 
         // 💡 [개선] 추상화된 함수를 순서대로 호출

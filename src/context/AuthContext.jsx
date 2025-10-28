@@ -102,22 +102,16 @@ export const AuthProvider = ({ children }) => {
   // 💡 [추가] 소셜 로그인 후 토큰과 userId로 로그인 처리하는 함수
   //    ApiClient를 직접 사용하지 않고, axios를 사용하여 순환 참조를 방지합니다.
   const loginWithToken = useCallback(
-    (accessToken, refreshToken, userId, username, navigate) => {
+    (accessToken, refreshToken, userId, username) => {
       // 💡 [수정] username 파라미터 추가
       try {
-        // 💡 [수정] 이제 모든 정보가 준비된 상태로 호출되므로, 바로 저장하고 인증 상태로 만듭니다.
+        // 💡 [수정] localStorage에 모든 정보를 저장하는 것만 책임집니다.
+        // 상태 업데이트는 App 재로드 시 useEffect에서 처리하도록 합니다.
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('userId', userId);
         localStorage.setItem('userName', username);
         localStorage.setItem('isSocial', 'true'); // 💡 소셜 로그인은 isSocial을 true로 저장
-
-        setAccessToken(accessToken);
-        setRefreshToken(refreshToken);
-        setUserName(username);
-        setIsSocial(true);
-        setIsAuthenticated(true); // ⭐️ 모든 정보가 준비된 후 인증 상태로 변경
-        navigate('/teams', { replace: true }); // ⭐️ 모든 처리가 끝난 후 페이지 이동
       } catch (error) {
         console.error('소셜 로그인 사용자 정보 조회 실패:', error);
         logout(); // 실패 시 모든 인증 정보 초기화
@@ -125,6 +119,22 @@ export const AuthProvider = ({ children }) => {
     },
     [logout] // setTokens는 더 이상 직접적인 의존성이 아님
   );
+
+  // 💡 [추가] loginWithToken 호출 후 페이지 이동을 처리하는 useEffect
+  // KakaoCallback 페이지에서 이 함수를 호출하고 바로 페이지를 이동시키면,
+  // 상태 업데이트가 렌더링 주기보다 늦어 ProtectedRoute에서 튕기는 현상을 방지합니다.
+  useEffect(() => {
+    // accessToken이 방금 설정되었고, 이전에는 없었다면 로그인 성공으로 간주합니다.
+    // (단순히 accessToken 존재 여부만 체크하면 페이지 새로고침마다 실행되므로,
+    // isAuthenticated 상태를 함께 확인하여 최초 로그인 시에만 동작하도록 제한합니다.)
+    const wasAuthenticated = isAuthenticated;
+    const hasToken = !!localStorage.getItem('accessToken');
+
+    if (hasToken && !wasAuthenticated) {
+      // 상태를 강제로 동기화하고 페이지를 이동합니다.
+      window.location.href = '/#/teams'; // HashRouter를 사용하므로 #을 포함합니다.
+    }
+  }, [isAuthenticated]); // isAuthenticated 상태가 변경될 때만 체크
 
   // � [추가] 계정 탈퇴 처리
   const api = useApiClient(); // 💡 ApiClient 인스턴스 생성
@@ -156,12 +166,8 @@ export const AuthProvider = ({ children }) => {
       // 💡 [개선] 사용자 종류와 관계없이 클라이언트 데이터를 먼저 정리합니다.
       clearAuthData();
 
-      // 💡 [개선] 소셜 로그인 사용자의 경우, 카카오와 연결도 끊습니다.
-      if (isSocial) {
-        const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
-        const LOGOUT_REDIRECT_URI = `${window.location.origin}/`; // 연결 해제 후 돌아올 메인 페이지
-        window.location.href = `https://kauth.kakao.com/oauth/logout?client_id=${KAKAO_CLIENT_ID}&logout_redirect_uri=${LOGOUT_REDIRECT_URI}`;
-      }
+      // 💡 [수정] 서버에서 연결 끊기를 담당하므로, 클라이언트는 홈으로 이동만 합니다.
+      window.location.href = '/';
     } catch (err) {
       console.error('계정 탈퇴 실패:', err);
       // 💡 [수정] ApiClient의 인터셉터가 401을 처리하므로, 여기서는 logout()을 직접 호출할 필요가 없습니다.
