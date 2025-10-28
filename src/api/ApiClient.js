@@ -130,5 +130,12 @@ class ApiClient {
 export const useApiClient = () => {
   const auth = useContext(AuthContext);
   // authContext가 변경될 때만 새로운 인스턴스를 생성하도록 useMemo 사용
-  return useMemo(() => new ApiClient(auth), [auth]);
+  // 💡 [핵심 수정] 의존성 배열에 auth 객체 전체 대신, 실제 사용하는 값들을 명시합니다.
+  // 이렇게 하면 accessToken, refreshToken, setTokens 등이 변경될 때마다
+  // 새로운 ApiClient 인스턴스가 생성되어 항상 최신 상태와 함수를 참조하게 됩니다.
+  return useMemo(
+    () => new ApiClient(auth),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [auth.accessToken, auth.refreshToken, auth.setTokens, auth.logout]
+  );
 };
