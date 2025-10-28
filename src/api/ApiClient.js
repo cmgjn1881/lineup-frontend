@@ -7,10 +7,12 @@ import { AuthContext } from '../context/AuthContextDefinition';
 export const RENDER_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export const API_BASE_URL = `${RENDER_BASE_URL}/api`;
 
-// [핵심] Interceptor 설정이 포함된 API Client
-class ApiClient {
-  constructor(authContext) {
-    this.auth = authContext;
+export class ApiClient {
+  // 💡 [수정] 생성자에서 authContext 전체 대신 setTokens와 logout 함수만 받습니다.
+  // 이렇게 하면 ApiClient가 accessToken, refreshToken 같은 상태 값에 직접 의존하지 않게 됩니다.
+  constructor(setTokens, logout) {
+    this.setTokens = setTokens;
+    this.logout = logout;
     this.client = axios.create({
       baseURL: API_BASE_URL,
       headers: { 'Content-Type': 'application/json' },
@@ -18,7 +20,8 @@ class ApiClient {
 
     // 1. 요청 Interceptor: Access Token 추가
     this.client.interceptors.request.use((config) => {
-      const token = this.auth.accessToken;
+      // 💡 [수정] AuthContext의 상태 대신 localStorage에서 직접 토큰을 읽어옵니다.
+      const token = localStorage.getItem('accessToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -34,15 +37,15 @@ class ApiClient {
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          const refreshToken = this.auth.refreshToken;
+          // 💡 [수정] localStorage에서 직접 토큰을 읽어옵니다.
+          const refreshToken = localStorage.getItem('refreshToken');
 
           if (refreshToken) {
             try {
               const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
 
-              // 💡 [수정] 서버 요구사항에 맞게 토큰을 커스텀 헤더에 담아 전송합니다.
-              // 💡 [핵심 수정] `this.auth.accessToken`을 사용하여 만료된 토큰을 가져옵니다.
-              const oldAccessToken = this.auth.accessToken;
+              // 💡 [수정] localStorage에서 직접 토큰을 읽어옵니다.
+              const oldAccessToken = localStorage.getItem('accessToken');
 
               const refreshResponse = await axios.post(
                 refreshEndpoint,
@@ -63,18 +66,18 @@ class ApiClient {
               } = refreshResponse.data;
 
               // 토큰 업데이트 및 원래 요청 재시도
-              this.auth.setTokens(newAccessToken, newRefreshToken, userEmail, userName); // ✨ setTokens에 userName 전달
+              this.setTokens(newAccessToken, newRefreshToken, userEmail, userName);
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
               return this.client(originalRequest);
             } catch (refreshError) {
               // Refresh Token 만료 시 로그아웃 처리
-              this.auth.logout('session_expired'); // 💡 로그아웃 사유 전달
+              this.logout('session_expired');
               return Promise.reject(refreshError);
             }
           } else {
             // Refresh Token이 없으면 로그아웃 처리
-            this.auth.logout('session_expired'); // 💡 로그아웃 사유 전달
+            this.logout('session_expired');
           }
         }
 
@@ -130,14 +133,9 @@ class ApiClient {
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
 export const useApiClient = () => {
-  const auth = useContext(AuthContext);
-  // authContext가 변경될 때만 새로운 인스턴스를 생성하도록 useMemo 사용
-  // 💡 [핵심 수정] 의존성 배열에 auth 객체 전체 대신, 실제 사용하는 값들을 명시합니다.
-  // 이렇게 하면 accessToken, refreshToken, setTokens 등이 변경될 때마다
-  // 새로운 ApiClient 인스턴스가 생성되어 항상 최신 상태와 함수를 참조하게 됩니다.
-  return useMemo(
-    () => new ApiClient(auth),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.accessToken, auth.refreshToken, auth.setTokens, auth.logout, auth.isSocial, auth.clearAuthData]
-  );
+  // 💡 [수정] AuthContext에서 setTokens와 logout 함수만 가져옵니다.
+  const { setTokens, logout } = useContext(AuthContext);
+
+  // 💡 [수정] ApiClient가 더 이상 상태 값에 의존하지 않으므로, 의존성 배열에서 상태 관련 값들을 제거합니다.
+  return useMemo(() => new ApiClient(setTokens, logout), [setTokens, logout]);
 };

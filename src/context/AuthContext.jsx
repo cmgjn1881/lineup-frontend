@@ -1,9 +1,8 @@
 // src/context/AuthContext.jsx
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // 💡 ApiClient 사용을 위해 임포트
 import axios from 'axios';
-import { API_BASE_URL } from '../api/ApiClient'; // 💡 API_BASE_URL 임포트
-import { useApiClient } from '../api/ApiClient'; // 💡 ApiClient 사용을 위해 임포트
+import { API_BASE_URL, ApiClient } from '../api/ApiClient'; // 💡 API_BASE_URL 및 ApiClient 임포트
 // 1. Context 정의를 별도 파일에서 임포트
 import { AuthContext } from './AuthContextDefinition';
 
@@ -126,7 +125,10 @@ export const AuthProvider = ({ children }) => {
     [logout] // setTokens는 더 이상 직접적인 의존성이 아님
   );
 
-  const api = useApiClient(); // 💡 [수정] useApiClient를 AuthProvider 컴포넌트 최상위 레벨에서 호출
+  // 💡 [수정] ApiClient 인스턴스를 AuthProvider 내에서 생성합니다.
+  // 이제 ApiClient는 setTokens와 logout 함수에만 의존하므로,
+  // 상태(accessToken 등)가 변경되어도 재생성되지 않아 stale state 문제가 발생하지 않습니다.
+  const api = useMemo(() => new ApiClient(setTokens, logout), [setTokens, logout]);
 
   // 계정 탈퇴 처리 (useCallback의 의존성 배열에 api 추가)
   const withdraw = useCallback(async () => {
@@ -170,7 +172,7 @@ export const AuthProvider = ({ children }) => {
         alert(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
       }
     }
-  }, [api, isSocial, clearAuthData]); // 💡 [수정] api를 의존성 배열에 추가
+  }, [api, isSocial, clearAuthData]);
 
   const authContextValue = useMemo(
     () => ({
@@ -183,7 +185,10 @@ export const AuthProvider = ({ children }) => {
       setTokens,
       loginWithToken, // 💡 새로 만든 함수를 context에 포함
       logout,
+      // 💡 [추가] withdraw와 clearAuthData를 context value에 포함시켜야 합니다.
+      // useApiClient의 의존성 배열에서 제거되었으므로, 다른 곳에서 사용될 수 있도록 명시적으로 전달해야 합니다.
       withdraw,
+      clearAuthData,
     }),
     [
       isAuthenticated,
@@ -196,6 +201,7 @@ export const AuthProvider = ({ children }) => {
       loginWithToken,
       logout,
       withdraw,
+      clearAuthData,
     ]
   );
 
