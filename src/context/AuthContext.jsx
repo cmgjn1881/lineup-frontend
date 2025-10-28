@@ -154,13 +154,15 @@ export const AuthProvider = ({ children }) => {
       alert('계정이 성공적으로 탈퇴되었습니다.');
 
       // 💡 [개선] 사용자 종류와 관계없이 클라이언트 데이터를 먼저 정리합니다.
+      // 서버에서 탈퇴 처리가 성공했으므로 클라이언트 데이터 정리
       clearAuthData();
 
       // 💡 [수정] 서버에서 연결 끊기를 담당하므로, 클라이언트는 홈으로 이동만 합니다.
       window.location.href = '/';
     } catch (err) {
       console.error('계정 탈퇴 실패:', err);
-      // 💡 [수정] ApiClient의 인터셉터가 401을 처리하므로, 여기서는 logout()을 직접 호출할 필요가 없습니다.
+      // 💡 [수정] 401 오류는 ApiClient의 인터셉터가 토큰 재발급을 시도하므로 별도 처리가 필요 없습니다.
+      // 재발급마저 실패하여 최종적으로 401, 403 오류가 발생한 경우에만 사용자에게 알립니다.
       if (err.response?.status === 401 || err.response?.status === 403) {
         alert('인증 정보가 유효하지 않아 탈퇴 처리에 실패했습니다. 다시 로그인해 주세요.');
       } else {
