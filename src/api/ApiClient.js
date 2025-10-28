@@ -41,7 +41,8 @@ class ApiClient {
               const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
 
               // 💡 [수정] 서버 요구사항에 맞게 토큰을 커스텀 헤더에 담아 전송합니다.
-              const oldAccessToken = originalRequest.headers.Authorization?.replace('Bearer ', '');
+              // 💡 [핵심 수정] `this.auth.accessToken`을 사용하여 만료된 토큰을 가져옵니다.
+              const oldAccessToken = this.auth.accessToken;
 
               const refreshResponse = await axios.post(
                 refreshEndpoint,
