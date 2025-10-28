@@ -1,7 +1,7 @@
 // src/api/ApiClient.js
 
 import axios from 'axios';
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { AuthContext } from '../context/AuthContextDefinition';
 
 export const RENDER_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -9,15 +9,15 @@ export const API_BASE_URL = `${RENDER_BASE_URL}/api`;
 
 // [핵심] Interceptor 설정이 포함된 API Client
 class ApiClient {
-  constructor() {
-    // 💡 [수정] 생성자에서 authContext를 받지 않습니다.
+  constructor(authContext) {
+    this.auth = authContext;
     this.client = axios.create({
       baseURL: API_BASE_URL,
       headers: { 'Content-Type': 'application/json' },
     });
 
     // 1. 요청 Interceptor: Access Token 추가
-    this.client.interceptors.request.use(async (config) => {
+    this.client.interceptors.request.use((config) => {
       const token = this.auth.accessToken;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -34,14 +34,15 @@ class ApiClient {
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
-          const refreshToken = this.auth?.refreshToken; // 💡 [수정] this.auth에서 직접 참조
+          const refreshToken = this.auth.refreshToken;
 
           if (refreshToken) {
             try {
               const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
 
               // 💡 [수정] 서버 요구사항에 맞게 토큰을 커스텀 헤더에 담아 전송합니다.
-              const oldAccessToken = this.auth?.accessToken; // 💡 [수정] this.auth에서 직접 참조
+              // 💡 [핵심 수정] `this.auth.accessToken`을 사용하여 만료된 토큰을 가져옵니다.
+              const oldAccessToken = this.auth.accessToken;
 
               const refreshResponse = await axios.post(
                 refreshEndpoint,
@@ -62,7 +63,7 @@ class ApiClient {
               } = refreshResponse.data;
 
               // 토큰 업데이트 및 원래 요청 재시도
-              this.auth?.setTokens(newAccessToken, newRefreshToken, userEmail, userName); // 💡 [수정] this.auth의 함수 호출
+              this.auth.setTokens(newAccessToken, newRefreshToken, userEmail, userName); // ✨ setTokens에 userName 전달
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
               return this.client(originalRequest);
@@ -73,7 +74,7 @@ class ApiClient {
             }
           } else {
             // Refresh Token이 없으면 로그아웃 처리
-            this.auth?.logout('session_expired'); // 💡 [수정] this.auth의 함수 호출
+            this.auth.logout('session_expired'); // 💡 로그아웃 사유 전달
           }
         }
 
@@ -81,12 +82,6 @@ class ApiClient {
       }
     );
   }
-
-  // 💡 [추가] AuthContext를 ApiClient 인스턴스에 주입하는 메서드
-  // 이 메서드는 React 컴포넌트에서 ApiClient를 사용할 때 호출됩니다.
-  setAuth = (authContext) => {
-    this.auth = authContext;
-  };
 
   // API 엔드포인트 호출 메서드
   login = (email, password) => this.client.post('/auth/login', { email, password });
@@ -131,15 +126,9 @@ class ApiClient {
     );
 }
 
-// 💡 [수정] ApiClient 인스턴스를 한 번만 생성하여 전역적으로 사용합니다. (싱글턴 패턴)
-const apiClientInstance = new ApiClient();
-
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
 export const useApiClient = () => {
   const auth = useContext(AuthContext);
-
-  // 💡 [수정] 매 렌더링마다 최신 auth 컨텍스트를 주입합니다.
-  apiClientInstance.setAuth(auth);
-
-  return apiClientInstance;
+  // authContext가 변경될 때만 새로운 인스턴스를 생성하도록 useMemo 사용
+  return useMemo(() => new ApiClient(auth), [auth]);
 };
