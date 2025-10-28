@@ -113,7 +113,16 @@ class ApiClient {
 
   // 💡 [수정] 소셜 로그인 API
   // provider(e.g., 'kakao')와 소셜 엑세스 토큰을 백엔드로 보내 서비스 토큰을 요청합니다.
-  socialLogin = (provider, accessToken) => this.client.post(`/auth/social-login`, { provider, accessToken });
+  socialLogin = (provider, accessToken) =>
+    this.client.post(
+      `/auth/social-login`,
+      { provider, accessToken },
+      {
+        // 💡 [핵심 수정] 소셜 로그인 요청 시에는 기존 인증 토큰을 보내지 않도록 헤더를 명시적으로 비웁니다.
+        // 이렇게 하면 만료된 토큰으로 인해 401 오류가 발생하는 것을 방지할 수 있습니다.
+        headers: { Authorization: null },
+      }
+    );
 }
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
