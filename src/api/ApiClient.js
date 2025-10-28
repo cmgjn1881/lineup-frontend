@@ -12,6 +12,10 @@ export class ApiClient {
   // 이렇게 하면 ApiClient가 accessToken, refreshToken 같은 상태 값에 직접 의존하지 않게 됩니다.
   constructor(setTokens, logout) {
     this.setTokens = setTokens;
+    // 💡 [추가] 토큰 재발급 로직의 경쟁 상태를 방지하기 위한 변수
+    this.isRefreshing = false;
+    this.failedQueue = [];
+
     this.logout = logout;
     this.client = axios.create({
       baseURL: API_BASE_URL,
@@ -32,10 +36,36 @@ export class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
+        // 💡 [수정] processFailedQueue와 addFailedRequest 함수를 인터셉터 내부에 정의합니다.
+        const processFailedQueue = (error, token = null) => {
+          this.failedQueue.forEach((prom) => {
+            if (error) {
+              prom.reject(error);
+            } else {
+              prom.resolve(token);
+            }
+          });
+          this.failedQueue = [];
+        };
+
+        const addFailedRequest = (originalRequest) => {
+          return new Promise((resolve, reject) => {
+            this.failedQueue.push({ resolve, reject, originalRequest });
+          });
+        };
+
         const originalRequest = error.config;
 
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
+          // 💡 [수정] 토큰 재발급 중에는 다른 요청들을 대기시킵니다.
+          if (this.isRefreshing) {
+            const newAccessToken = await addFailedRequest(originalRequest);
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return this.client(originalRequest);
+          }
+
           originalRequest._retry = true;
+          this.isRefreshing = true;
 
           // 💡 [수정] localStorage에서 직접 토큰을 읽어옵니다.
           const refreshToken = localStorage.getItem('refreshToken');
@@ -67,16 +97,21 @@ export class ApiClient {
 
               // 토큰 업데이트 및 원래 요청 재시도
               this.setTokens(newAccessToken, newRefreshToken, userEmail, userName);
+              processFailedQueue(null, newAccessToken); // 💡 대기 중인 요청들 재개
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
               return this.client(originalRequest);
             } catch (refreshError) {
               // Refresh Token 만료 시 로그아웃 처리
+              processFailedQueue(refreshError, null); // 💡 대기 중인 요청들 실패 처리
               this.logout('session_expired');
               return Promise.reject(refreshError);
+            } finally {
+              this.isRefreshing = false; // 💡 재발급 프로세스 종료
             }
           } else {
             // Refresh Token이 없으면 로그아웃 처리
+            this.isRefreshing = false; // 💡 재발급 프로세스 종료
             this.logout('session_expired');
           }
         }

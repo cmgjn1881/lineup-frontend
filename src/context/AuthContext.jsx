@@ -69,34 +69,41 @@ export const AuthProvider = ({ children }) => {
       } else {
         alert('로그아웃되었습니다.');
       }
-
-      // 3. 카카오 로그인 사용자였을 경우, 카카오 세션도 로그아웃
-      // 💡 [개선] 카카오 로그아웃 페이지를 거치지 않고, 바로 우리 서비스의 메인 페이지로 이동합니다.
-      // 이렇게 하면 사용자는 다른 카카오 서비스의 로그인 상태를 유지할 수 있습니다.
-      window.location.href = '/';
     },
     [clearAuthData]
   );
 
   // 토큰 저장 및 상태 업데이트
-  const setTokens = useCallback((newAccess, newRefresh, email, name) => {
-    setAccessToken(newAccess);
-    setRefreshToken(newRefresh);
-    localStorage.setItem('accessToken', newAccess);
-    localStorage.setItem('refreshToken', newRefresh);
+  const setTokens = useCallback(
+    (newAccess, newRefresh, email, name) => {
+      setAccessToken(newAccess);
+      setRefreshToken(newRefresh);
+      localStorage.setItem('accessToken', newAccess);
+      localStorage.setItem('refreshToken', newRefresh);
 
-    setIsAuthenticated(true);
-    localStorage.setItem('isSocial', 'false'); // 💡 일반 로그인은 isSocial을 false로 저장
+      setIsAuthenticated(true);
+      localStorage.setItem('isSocial', 'false'); // 💡 일반 로그인은 isSocial을 false로 저장
 
-    if (email) {
-      setUserEmail(email);
-      localStorage.setItem('userEmail', email);
-    }
-    if (name) {
-      setUserName(name);
-      localStorage.setItem('userName', name); // ✨ userName 저장
-    }
-  }, []);
+      if (email) {
+        setUserEmail(email);
+        localStorage.setItem('userEmail', email);
+      }
+      if (name) {
+        setUserName(name);
+        localStorage.setItem('userName', name); // ✨ userName 저장
+      }
+    },
+    [
+      // 💡 [수정] setTokens가 의존하는 모든 상태 업데이트 함수를 배열에 추가합니다.
+      // 이렇게 하면 setTokens 함수가 항상 최신 상태 업데이트 함수를 참조하게 됩니다.
+      setAccessToken,
+      setRefreshToken,
+      setIsAuthenticated,
+      setIsSocial,
+      setUserEmail,
+      setUserName,
+    ]
+  );
 
   // 💡 [추가] 소셜 로그인 후 토큰과 userId로 로그인 처리하는 함수
   //    ApiClient를 직접 사용하지 않고, axios를 사용하여 순환 참조를 방지합니다.
@@ -122,7 +129,15 @@ export const AuthProvider = ({ children }) => {
         logout(); // 실패 시 모든 인증 정보 초기화
       }
     },
-    [logout] // setTokens는 더 이상 직접적인 의존성이 아님
+    [
+      // 💡 [수정] loginWithToken이 의존하는 모든 상태 업데이트 함수와 logout을 배열에 추가합니다.
+      setAccessToken,
+      setRefreshToken,
+      setUserName,
+      setIsSocial,
+      setIsAuthenticated,
+      logout,
+    ]
   );
 
   // 💡 [수정] ApiClient 인스턴스를 AuthProvider 내에서 생성합니다.
