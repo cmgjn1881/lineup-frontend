@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail'));
   const [userName, setUserName] = useState(localStorage.getItem('userName')); // ✨ userName 상태 추가
+  const [userId, setUserId] = useState(localStorage.getItem('userId')); // ✨ userId 상태 추가
   const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'));
   const [isSocial, setIsSocial] = useState(localStorage.getItem('isSocial') === 'true'); // 💡 소셜 로그인 여부 상태
   const [refreshToken, setRefreshToken] = useState(localStorage.getItem('refreshToken'));
@@ -20,8 +21,10 @@ export const AuthProvider = ({ children }) => {
     if (accessToken) {
       const storedEmail = localStorage.getItem('userEmail');
       const storedUserName = localStorage.getItem('userName'); // ✨ userName 불러오기
+      const storedUserId = localStorage.getItem('userId'); // ✨ userId 불러오기
       if (storedEmail) setUserEmail(storedEmail);
       if (localStorage.getItem('isSocial') === 'true') setIsSocial(true); // 💡 isSocial 상태 복원
+      if (storedUserId) setUserId(storedUserId); // ✨ userId 상태 설정
       if (storedUserName) setUserName(storedUserName); // ✨ userName 상태 설정
       setIsAuthenticated(true);
     }
@@ -32,6 +35,7 @@ export const AuthProvider = ({ children }) => {
     setAccessToken(null);
     setRefreshToken(null);
     setUserName(null); // ✨ userName 초기화
+    setUserId(null); // ✨ userId 초기화
     setUserEmail(null);
     setIsSocial(false); // 💡 isSocial 초기화
     setIsAuthenticated(false);
@@ -39,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isSocial'); // 💡 isSocial 제거
-    localStorage.removeItem('userName'); // 💡 userName 제거
+    localStorage.removeItem('userName'); // ✨ userName 제거
     localStorage.removeItem('userId'); // 💡 userId도 제거
   }, []);
 
@@ -99,7 +103,6 @@ export const AuthProvider = ({ children }) => {
       setAccessToken,
       setRefreshToken,
       setIsAuthenticated,
-      setIsSocial,
       setUserEmail,
       setUserName,
     ]
@@ -108,31 +111,35 @@ export const AuthProvider = ({ children }) => {
   // 💡 [추가] 소셜 로그인 후 토큰과 userId로 로그인 처리하는 함수
   //    ApiClient를 직접 사용하지 않고, axios를 사용하여 순환 참조를 방지합니다.
   const loginWithToken = useCallback(
-    (accessToken, refreshToken, userId, username, navigate) => {
-      // 💡 [수정] username 파라미터 추가
+    async (accessToken, refreshToken, newUserId, username) => {
+      // 💡 [수정] username 파라미터 추가, navigate 제거, async 추가
       try {
         // 💡 [수정] 이제 모든 정보가 준비된 상태로 호출되므로, 바로 저장하고 인증 상태로 만듭니다.
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('userId', userId);
+        localStorage.setItem('userId', newUserId);
         localStorage.setItem('userName', username);
         localStorage.setItem('isSocial', 'true'); // 💡 소셜 로그인은 isSocial을 true로 저장
 
         setAccessToken(accessToken);
         setRefreshToken(refreshToken);
+        setUserId(newUserId);
         setUserName(username);
         setIsSocial(true);
         setIsAuthenticated(true); // ⭐️ 모든 정보가 준비된 후 인증 상태로 변경
-        navigate('/teams', { replace: true }); // ⭐️ 모든 처리가 끝난 후 페이지 이동
+        // ⭐️ 페이지 이동은 호출한 쪽에서 담당하도록 Promise를 반환합니다.
+        return Promise.resolve();
       } catch (error) {
-        console.error('소셜 로그인 사용자 정보 조회 실패:', error);
-        logout(); // 실패 시 모든 인증 정보 초기화
+        console.error('소셜 로그인 처리 중 에러:', error);
+        logout('session_expired'); // 실패 시 모든 인증 정보 초기화
+        return Promise.reject(error);
       }
     },
     [
       // 💡 [수정] loginWithToken이 의존하는 모든 상태 업데이트 함수와 logout을 배열에 추가합니다.
       setAccessToken,
       setRefreshToken,
+      setUserId,
       setUserName,
       setIsSocial,
       setIsAuthenticated,
@@ -194,6 +201,7 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       userEmail,
       userName, // ✨ Context 값으로 전달
+      userId, // ✨ userId 값 전달
       isSocial, // 💡 isSocial 값 전달
       accessToken,
       refreshToken,
@@ -207,6 +215,7 @@ export const AuthProvider = ({ children }) => {
     }),
     [
       isAuthenticated,
+      userId,
       userEmail,
       userName,
       isSocial,

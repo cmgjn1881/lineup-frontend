@@ -46,7 +46,8 @@ const KakaoCallback = () => {
     async (kakaoAccessToken) => {
       const serverResponse = await api.socialLogin('kakao', kakaoAccessToken);
       const { accessToken, refreshToken, userId, username } = serverResponse.data;
-      auth.loginWithToken(accessToken, refreshToken, userId, username, navigate);
+      await auth.loginWithToken(accessToken, refreshToken, userId, username);
+      navigate('/teams', { replace: true });
     },
     [api, auth, navigate]
   );
