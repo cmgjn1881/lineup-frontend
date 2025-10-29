@@ -74,29 +74,17 @@ export class ApiClient {
             try {
               const refreshEndpoint = `${RENDER_BASE_URL}/api/auth/refresh`;
 
-              // 💡 [수정] localStorage에서 직접 토큰을 읽어옵니다.
-              const oldAccessToken = localStorage.getItem('accessToken');
-
+              // 💡 [수정] refreshToken을 body에 담아 토큰 재발급을 요청합니다.
               const refreshResponse = await axios.post(
                 refreshEndpoint,
-                {}, // 요청 본문은 비워둡니다.
-                {
-                  headers: {
-                    'X-Access-Token': oldAccessToken,
-                    'X-Refresh-Token': refreshToken,
-                  },
-                }
+                { refreshToken } // 요청 본문에 refreshToken을 포함합니다.
               );
 
-              const {
-                accessToken: newAccessToken,
-                refreshToken: newRefreshToken,
-                email: userEmail,
-                username: userName, // ✨ username 받아오기
-              } = refreshResponse.data;
+              // 💡 [수정] 서버로부터 새로운 accessToken과 refreshToken을 받습니다.
+              const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-              // 토큰 업데이트 및 원래 요청 재시도
-              this.setTokens(newAccessToken, newRefreshToken, userEmail, userName);
+              // 💡 [수정] 새로운 토큰으로 업데이트합니다. email과 username은 재발급 시 받지 않으므로 null 처리합니다.
+              this.setTokens(newAccessToken, newRefreshToken, null, null);
               processFailedQueue(null, newAccessToken); // 💡 대기 중인 요청들 재개
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
