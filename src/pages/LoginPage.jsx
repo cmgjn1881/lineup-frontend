@@ -1,11 +1,13 @@
 // src/pages/LoginPage.jsx
+/* eslint-disable no-unused-vars */ // 💡 이 파일 내에서 '사용하지 않는 변수' 경고를 비활성화합니다.
 
-import React, { useState } from 'react'; // 💡 useNavigate 임포트
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApiClient } from '../api/ApiClient'; // 분리된 클라이언트 임포트
+import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
 import SignupForm from './SignupForm';
-import KakaoLoginButton from './KakaoLoginButton'; // 💡 카카오 로그인 버튼 임포트
+import KakaoLoginButton from './KakaoLoginButton';
+import mainLogo from '../assets/mainlogo.svg';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -14,36 +16,34 @@ const LoginPage = () => {
   const [error, setError] = useState('');
 
   const api = useApiClient();
-  const auth = useAuth(); // useAuth 훅 사용
-  const navigate = useNavigate(); // 💡 useNavigate 훅 사용
+  const auth = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    // 🔑 함수명을 handleLogin으로 변경
     e.preventDefault();
     setError('');
     try {
       const res = await api.login(email, password);
-      //console.log('로그인 응답 데이터:', res.data); // ✨ 로그인 응답 데이터 확인
-      const { accessToken, refreshToken, email: userEmail, username: userName } = res.data; // ✨ username 받아오기
-      auth.setTokens(accessToken, refreshToken, userEmail, userName); // ✨ setTokens에 userName 전달
-      // 💡 [개선] window.location 대신 navigate 함수를 사용하여 페이지를 이동합니다.
+      //console.log('로그인 응답 데이터:', res.data);
+      const { accessToken, refreshToken, email: userEmail, username: userName } = res.data;
+      auth.setTokens(accessToken, refreshToken, userEmail, userName);
       navigate('/teams', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || '로그인 요청 처리 중 오류가 발생했습니다.');
     }
   };
 
-  // 🔑 회원가입 상태라면 SignupForm을 렌더링합니다.
+  // 회원가입 상태라면 SignupForm을 렌더링합니다.
   if (isSignup) {
     return (
       <div className="p-4 max-w-sm mx-auto">
         <SignupForm
           onSignupSuccess={() => {
-            setIsSignup(false); // 가입 성공 후 로그인 폼으로 전환
-            setEmail(''); // 폼 초기화
+            setIsSignup(false);
+            setEmail('');
             setPassword('');
           }}
-          onCancel={() => setIsSignup(false)} // '로그인' 버튼 클릭 시 전환
+          onCancel={() => setIsSignup(false)}
         />
       </div>
     );
@@ -51,9 +51,11 @@ const LoginPage = () => {
 
   return (
     <div className="p-4 max-w-sm mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-indigo-600">{isSignup ? '회원가입' : '로그인'}</h2>
+      {/* 💡 [임시 수정] 일반 로그인/회원가입 UI를 주석 처리하고 카카오 로그인만 남깁니다. */}
+      {/* 💡 [수정] 기존 코드를 삭제하는 대신 주석으로 남겨둡니다. */}
+      {/*
+      <h2 className="text-3xl font-bold mb-6 text-center text-indigo-600">로그인</h2>
       <form onSubmit={handleLogin} className="space-y-4">
-        {/* ... (이전과 동일한 UI) ... */}
         <input
           type="email"
           placeholder="이메일"
@@ -70,9 +72,7 @@ const LoginPage = () => {
           required
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
         />
-
         {error && <p className="text-red-500 text-sm">{error}</p>}
-
         <button
           type="submit"
           className="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-200"
@@ -80,14 +80,15 @@ const LoginPage = () => {
           로그인
         </button>
       </form>
-      <button
-        onClick={() => setIsSignup(true)}
-        className="mt-4 w-full text-sm text-center text-indigo-500 hover:text-indigo-700 transition duration-200"
-      >
+      <button onClick={() => setIsSignup(true)} className="mt-4 w-full text-sm text-center text-indigo-500 hover:text-indigo-700 transition duration-200">
         계정이 없으신가요? 회원가입
       </button>
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-center text-sm text-gray-500 mb-2">소셜 로그인</p>
+      */}
+
+      {/* 화면 중앙에 소셜 로그인 버튼을 배치하기 위해 flexbox를 사용합니다. */}
+      <div className="flex flex-col justify-center items-center h-[calc(100vh-8rem)]">
+        {/* 💡 [수정] h2 텍스트를 로고 이미지로 교체합니다. */}
+        <img src={mainLogo} alt="Lineup Maker Logo" className="w-48 mb-12" />
         {/* 💡 카카오 로그인 버튼 렌더링 */}
         <KakaoLoginButton />
       </div>

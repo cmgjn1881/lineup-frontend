@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Briefcase, Users, Grid, ArrowLeft, Shield } from 'lucide-react';
+import playermanagement from '../assets/playermanagementIcon.svg';
+import formationmanagement from '../assets/formationmanagementIcon.svg';
 // import { useApiClient } from '../api/ApiClient'; // API 연동 시 주석 해제
 
 const TeamDetailPage = ({ teamId }) => {
@@ -38,37 +39,32 @@ const TeamDetailPage = ({ teamId }) => {
   }
 
   return (
-    <div className="pt-0 pr-6 pb-6 pl-6 max-w-2xl mx-auto">
-      <h2 className="text-4xl font-extrabold mb-2 text-indigo-700 flex items-center">
-        <Shield className="w-8 h-8 mr-3" /> {team.name}
-      </h2>
-      <p className="text-gray-500 mb-10">
-        팀 ID: {team.teamId} | 소유자: {team.ownerEmail}
-      </p>
+    <div className="p-4">
+      <h2 className="text-3xl font-extrabold mb-2 text-white flex items-center">{team.name}</h2>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="pt-16 pr-8 pl-8 grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* 1. 팀 선수 관리 버튼 */}
         <Link
           to={`/teams/${teamId}/players`}
           state={{ team: team }} // 팀 정보를 state로 전달
-          className="p-6 bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
+          className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-3xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
         >
-          <Users className="w-10 h-10 text-blue-500 mb-3" />
-          <h3 className="text-2xl font-semibold text-gray-800">팀 선수 관리</h3>
-          <p className="text-gray-500 mt-2">선수를 추가, 수정, 삭제합니다.</p>
+          <img src={playermanagement} alt="팀 선수 관리" className="w-10 h-10 mb-3" />
+          <h3 className="text-sm font-semibold text-white">팀 선수 관리</h3>
+          <p className="text-[#63FF70] mt-2 text-xs">선수를 추가, 수정, 삭제합니다.</p>
         </Link>
 
         {/* 2. 포메이션 관리 버튼 */}
         <Link
           to={`/teams/${teamId}/formation`}
           state={{ team: team }} // 팀 정보를 state로 전달
-          className="p-6 bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
+          className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-3xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
         >
-          <Grid className="w-10 h-10 text-green-500 mb-3" />
-          <h3 className="text-2xl font-semibold text-gray-800">포메이션 관리</h3>
-          <p className="text-gray-500 mt-2">전술 및 기본 포메이션을 설정합니다.</p>
+          <img src={formationmanagement} alt="포메이션 관리" className="w-10 h-10 mb-3" />
+          <h3 className="text-sm font-semibold text-white">포메이션 관리</h3>
+          <p className="text-[#63FF70] mt-2 text-xs">전술 및 기본 포메이션을 설정합니다.</p>
         </Link>
       </div>
     </div>

@@ -1,11 +1,13 @@
 // src/pages/TeamPage.jsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-// React Router를 사용한다면 아래와 같이 Link를 import합니다.
 import { Link } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import GreenBtn from '../components/common/GreenBtn';
+import TextInput from '../components/common/TextInput';
+import cancelIcon from '../assets/cancel.svg';
 
 const TeamPage = () => {
   const api = useApiClient();
@@ -60,22 +62,16 @@ const TeamPage = () => {
 
   return (
     <div className="p-4">
-      {/* 팀 생성 폼 */}
-      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-6 p-4 border rounded-lg shadow-sm">
-        <input
+      <h1 className="font-bold text-white">팀 추가하기</h1>
+      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-6 pt-4 pb-4 border rounded-lg shadow-sm">
+        <TextInput
           type="text"
           placeholder="새 팀 이름 (예: FC 서울 개발팀)"
           value={newTeamName}
           onChange={(e) => setNewTeamName(e.target.value)}
           required
-          className="flex-grow px-4 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-xs"
         />
-        <button
-          type="submit"
-          className="py-2 px-4 bg-green-500 text-white text-xs font-semibold rounded-lg shadow-md hover:bg-green-600 transition duration-200 flex items-center"
-        >
-          <Plus className="w-3 h-3 mr-1" /> 팀 생성
-        </button>
+        <GreenBtn type="submit">팀 생성</GreenBtn>
       </form>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -86,29 +82,27 @@ const TeamPage = () => {
           <p className="text-gray-500">생성된 팀이 없습니다.</p>
         ) : (
           teams.map((team) => (
-            // **[변경] a 태그 대신 Link 컴포넌트 사용 (React Router)**
             <Link
               key={team.teamId}
-              to={`/teams/${team.teamId}`} // URL 경로: /teams/1234
-              state={{ team: team }} // << [수정] 페이지 이동 시 team 객체 전체를 state로 전달
-              className="w-full text-left bg-white p-4 border border-gray-200 rounded-lg shadow-md flex justify-between items-center transition duration-150 hover:shadow-lg hover:border-indigo-400 cursor-pointer"
+              to={`/teams/${team.teamId}`}
+              state={{ team: team }}
+              className="w-full text-left bg-[#0D1117] p-4 border border-[#6B6B6B] rounded-xl shadow-md flex justify-between items-center transition duration-150 hover:shadow-lg hover:border-[#63FF70] cursor-pointer"
             >
               <div>
-                <p className="text-xl font-semibold text-indigo-700">{team.name}</p>
-                <p className="text-sm text-gray-500">생성 일자: {team.createdAt.substring(0, 10)}</p>
+                <p className="text-xl font-semibold text-white">{team.name}</p>
+                <p className="text-sm text-[#4493F8]">생성 일자: {team.createdAt.substring(0, 10)}</p>
               </div>
               <div className="space-x-2">
                 <button
-                  // 삭제 버튼 클릭 시 Link의 페이지 이동을 막고 버블링 방지
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleDeleteTeam(team.teamId, team.name);
                   }}
-                  className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50"
+                  className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-950"
                   aria-label={`팀 ${team.name} 삭제`}
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <img src={cancelIcon} alt="삭제 아이콘" className="w-4 h-4" />
                 </button>
               </div>
             </Link>
