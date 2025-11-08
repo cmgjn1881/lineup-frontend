@@ -1,6 +1,6 @@
 // public/service-worker.js
 
-const CACHE_NAME = 'lineup-cache-v4';
+const CACHE_NAME = 'lineup-cache-v5';
 
 const urlsToCache = [
   '/',
@@ -42,18 +42,49 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // 'Stale-while-revalidate' 전략 적용
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
+      // 1. 캐시에서 응답을 먼저 찾아봅니다.
       const cachedResponse = await cache.match(request);
 
-      const fetchedResponsePromise = fetch(request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && request.url.startsWith('http')) {
-          cache.put(request, networkResponse.clone());
-        }
-        return networkResponse;
-      });
+      // 2. 네트워크에서 최신 리소스를 가져옵니다.
+      const fetchedResponsePromise = fetch(request)
+        .then((networkResponse) => {
+          // 유효한 응답일 경우에만 캐시에 저장합니다.
+          if (networkResponse && networkResponse.status === 200 && request.url.startsWith('http')) {
+            cache.put(request, networkResponse.clone());
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // 이 경우 cachedResponse가 반환됩니다.
+        });
 
+      // 3. 캐시된 응답이 있으면 즉시 반환하고(빠른 로딩), 없으면 네트워크 응답을 기다립니다.
       return cachedResponse || fetchedResponsePromise;
     })
   );
+});
+
+// 새 버전의 서비스 워커가 활성화될 때, 이전 버전의 캐시를 삭제합니다.
+self.addEventListener('activate', (event) => {
+  const cacheWhitelist = [CACHE_NAME]; // 유지할 캐시 목록 (현재 버전)
+  event.waitUntil(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName); // 화이트리스트에 없는 캐시는 삭제
+          }
+        })
+      )
+    )
+  );
+  // 서비스 워커가 활성화될 때, 현재 열려있는 모든 클라이언트(페이지)의 제어권을 즉시 가져옵니다.
+  return self.clients.claim();
 });
