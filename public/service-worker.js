@@ -1,6 +1,6 @@
 // public/service-worker.js
 
-const CACHE_NAME = 'lineup-cache-v5';
+const CACHE_NAME = 'lineup-cache-v6';
 
 const urlsToCache = [
   '/',
@@ -14,14 +14,14 @@ const urlsToCache = [
   '/apple-icon-120x120.png',
   '/apple-icon-144x144.png',
   '/apple-icon-152x152.png',
-  '/apple-icon-180x180.v2.png', // 💡 iOS용 핵심 아이콘
-  '/android-icon-192x192.v2.png', // 💡 Android용 핵심 아이콘
+  '/apple-icon-180x180.v2.png',
+  '/android-icon-192x192.v2.png',
   '/favicon-32x32.png',
   '/favicon-96x96.png',
   '/favicon-16x16.png',
   '/favicon.ico',
   '/ms-icon-144x144.png',
-  '/android-icon-512x512.v2.png', // 💡 Android용 핵심 아이콘
+  '/android-icon-512x512.v2.png',
   '/screenshot-mobile.v2.png',
 ];
 
@@ -46,7 +46,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 'Stale-while-revalidate' 전략 적용
+  const url = new URL(request.url);
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    return;
+  }
+
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       // 1. 캐시에서 응답을 먼저 찾아봅니다.
