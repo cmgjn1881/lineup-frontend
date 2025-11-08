@@ -1,6 +1,6 @@
 // public/service-worker.js
 
-const CACHE_NAME = 'lineup-cache-v3';
+const CACHE_NAME = 'lineup-cache-v4';
 
 const urlsToCache = [
   '/',
@@ -14,15 +14,15 @@ const urlsToCache = [
   '/apple-icon-120x120.png',
   '/apple-icon-144x144.png',
   '/apple-icon-152x152.png',
-  '/apple-icon-180x180.png',
-  '/android-icon-192x192.png',
+  '/apple-icon-180x180.v2.png', // 💡 iOS용 핵심 아이콘
+  '/android-icon-192x192.v2.png', // 💡 Android용 핵심 아이콘
   '/favicon-32x32.png',
   '/favicon-96x96.png',
   '/favicon-16x16.png',
   '/favicon.ico',
   '/ms-icon-144x144.png',
-  '/android-icon-512x512.png',
-  '/screenshot-mobile.png',
+  '/android-icon-512x512.v2.png', // 💡 Android용 핵심 아이콘
+  '/screenshot-mobile.v2.png',
 ];
 
 self.addEventListener('install', (event) => {
