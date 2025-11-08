@@ -1,6 +1,6 @@
 // public/service-worker.js
 
-const CACHE_NAME = 'lineup-cache-v1';
+const CACHE_NAME = 'lineup-cache-v2';
 // 💡 캐싱할 파일 목록입니다. 앱의 '껍데기'에 해당하는 필수 파일들을 포함합니다.
 // 빌드 도구(Vite, Webpack)의 PWA 플러그인을 사용하면 이 목록이 자동으로 관리됩니다.
 const urlsToCache = [
