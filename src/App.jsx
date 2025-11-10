@@ -52,11 +52,12 @@ const AppContent = () => {
   const mainRef = useRef(null);
 
   return (
-    <>
+    // 💡 [핵심 수정] AppContent를 감싸는 flex-col 컨테이너를 다시 만듭니다.
+    <div className="flex flex-col h-full">
       {!isLoginPage && <Header />}
-      {/* 💡 [수정] flex-1을 제거하여 레이아웃 계산을 더 단순하고 안정적으로 만듭니다. */}
+      {/* 💡 [핵심 수정] main 태그에 flex-1을 다시 추가하여 남는 공간을 모두 채우도록 합니다. */}
       <main
-        className={`w-full max-w-sm mx-auto bg-black ${
+        className={`w-full flex-1 max-w-sm mx-auto bg-black ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage || isProfilePage || isTeamDetailPage
@@ -69,7 +70,7 @@ const AppContent = () => {
         <Outlet />
       </main>
       {!isLoginPage && <FooterNav />}
-    </>
+    </div>
   );
 };
 
