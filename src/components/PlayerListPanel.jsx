@@ -61,7 +61,7 @@ const PlayerListPanel = ({ allPlayers, onPlayerClick, loading }) => {
                 key={player.id}
                 onClick={() => onPlayerClick(player)}
                 className={`p-2 border-2 rounded-md text-center text-xs font-medium cursor-pointer 
-                            bg-white transition duration-150 flex-shrink-0 ${ITEM_WIDTH}
+                            bg-white transition duration-150 shrink-0 ${ITEM_WIDTH}
                             ${styles.border} ${styles.hoverBg}`}
               >
                 {/* ⭐️ [추가] 포지션 표시 */}

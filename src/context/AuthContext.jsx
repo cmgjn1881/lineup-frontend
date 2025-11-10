@@ -204,14 +204,9 @@ export const AuthProvider = ({ children }) => {
   );
 
   if (isLoading) {
-    // 💡 [수정] null 대신 로딩 스피너를 포함한 최소한의 레이아웃을 렌더링합니다.
-    return (
-      <div className="flex flex-col h-dvh bg-black">
-        <div className="flex-1 flex justify-center items-center">
-          {/* 로딩 스피너나 간단한 메시지를 여기에 넣을 수 있습니다. */}
-        </div>
-      </div>
-    );
+    // 💡 [핵심 수정] AuthProvider는 더 이상 레이아웃을 그리지 않습니다.
+    // 로딩 중에는 자식 컴포넌트(RouterProvider)의 렌더링을 막기 위해 아무것도 반환하지 않습니다.
+    return null; // 또는 <></> (React.Fragment)
   }
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;

@@ -9,7 +9,9 @@ const ProfilePage = () => {
   const userName = auth.userName;
 
   return (
-    <div className="p-4 flex flex-col h-full">
+    // 💡 [핵심 수정] pb-16을 ProfilePage의 루트 div에 적용합니다.
+    // 이렇게 하면 FooterNav가 올라올 공간을 확보하면서도, 페이지 전체 높이가 화면을 초과하지 않습니다.
+    <div className="p-4 flex flex-col h-full pb-16">
       <div className="grow">
         {/* 계정 정보 */}
         <div className="bg-[#0D1117] p-4 mt-4 rounded-3xl shadow-md border border-[#6B6B6B]">
@@ -29,7 +31,8 @@ const ProfilePage = () => {
 
       {/* 2. 하단 버튼 영역 */}
       <div>
-        <div className="space-y-3 pb-16">
+        {/* 💡 [수정] 루트 div로 pb-16을 옮겼으므로, 여기서는 pb-4로 충분한 여백만 남깁니다. */}
+        <div className="space-y-3 pb-4">
           <button
             onClick={() => auth.logout('user')}
             className="block text-red-500 hover:text-red-400 transition-colors text-sm"

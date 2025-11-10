@@ -52,11 +52,9 @@ const AppContent = () => {
   const mainRef = useRef(null);
 
   return (
-    // 💡 [핵심 수정] h-screen을 h-dvh로 변경하여 모바일 브라우저의 동적 높이에 대응합니다.
-    <div className="flex flex-col h-dvh bg-black">
+    <>
       {!isLoginPage && <Header />}
-      {/* 💡 [수정] main 태그로 스타일을 통합하고, 내부의 불필요한 div를 제거합니다. */}
-      <main
+      <main // 💡 [수정] main 태그가 최상위 요소가 되도록 변경
         className={`w-full flex-1 overflow-y-auto max-w-sm mx-auto bg-black ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
@@ -69,8 +67,8 @@ const AppContent = () => {
         <ScrollToTop targetRef={mainRef} />
         <Outlet />
       </main>
-      <FooterNav />
-    </div>
+      {!isLoginPage && <FooterNav />}
+    </>
   );
 };
 
@@ -138,11 +136,15 @@ const router = createHashRouter([
 ]);
 
 const App = () => (
-  <div style={{ fontFamily: 'Inter, sans-serif' }}>
-    <AuthProvider>
+  // 💡 [핵심 수정] AuthProvider가 로딩 상태를 내부에서만 처리하고,
+  // 레이아웃은 항상 이 바깥쪽 컨테이너가 책임지도록 구조를 변경합니다.
+  <AuthProvider>
+    {/* 이 div가 앱의 생명주기 동안 절대 교체되지 않는 유일한 h-dvh 컨테이너가 됩니다. */}
+    <div className="flex flex-col h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* AuthProvider의 로딩 상태와 관계없이 RouterProvider는 항상 렌더링됩니다. */}
       <RouterProvider router={router} />
-    </AuthProvider>
-  </div>
+    </div>
+  </AuthProvider>
 );
 
 export default App;
