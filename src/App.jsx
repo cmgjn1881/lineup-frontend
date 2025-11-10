@@ -59,7 +59,7 @@ const AppContent = () => {
       {/* 💡 [최종 수정] main 태그를 absolute 포지셔닝으로 변경하여 헤더/푸터 사이의 공간을 정확히 차지하도록 합니다. */}
       {/* h-full과 padding을 함께 사용하던 문제를 근본적으로 해결합니다. */}
       <main
-        className={`w-full max-w-sm mx-auto bg-black absolute inset-x-0 ${
+        className={`w-full max-w-full mx-auto bg-black absolute inset-x-0 ${
           isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'
         } ${isLoginPage ? 'top-0 bottom-0' : isFormationPage ? 'top-14 bottom-0' : 'top-14 bottom-16'}`}
         ref={mainRef}
