@@ -54,8 +54,9 @@ const AppContent = () => {
   return (
     <>
       {!isLoginPage && <Header />}
+      {/* 💡 [수정] flex-1을 제거하여 레이아웃 계산을 더 단순하고 안정적으로 만듭니다. */}
       <main
-        className={`w-full flex-1 max-w-sm mx-auto bg-black ${
+        className={`w-full max-w-sm mx-auto bg-black ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage || isProfilePage || isTeamDetailPage

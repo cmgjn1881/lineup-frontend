@@ -9,30 +9,30 @@ const ProfilePage = () => {
   const userName = auth.userName;
 
   return (
-    // 💡 [핵심 수정] pb-16을 ProfilePage의 루트 div에 적용합니다.
-    // 이렇게 하면 FooterNav가 올라올 공간을 확보하면서도, 페이지 전체 높이가 화면을 초과하지 않습니다.
-    <div className="p-4 flex flex-col h-full pb-16">
-      <div className="grow">
-        {/* 계정 정보 */}
-        <div className="bg-[#0D1117] p-4 mt-4 rounded-3xl shadow-md border border-[#6B6B6B]">
-          <h3 className="text-lg font-semibold text-white mb-2">계정 정보</h3>
-          <div className="flex justify-between items-center py-2">
-            <span className="text-white">이름</span>
-            <span className="font-medium text-[#63FF70]">{userName}</span>
-          </div>
-          <div className="flex justify-between items-center py-2">
-            <span className="text-white">{auth.isSocial ? '로그인 방식' : '이메일'}</span>
-            <span className="font-medium text-gray-800">
-              {auth.isSocial ? <span className="text-[#FBD300] font-bold">카카오 로그인</span> : userEmail}
-            </span>
-          </div>
+    // 💡 [수정] 불필요한 flex, h-full, pb-16을 제거하고, 콘텐츠 영역만 남깁니다.
+    <div className="p-4">
+      {/* 계정 정보 */}
+      <div className="bg-[#0D1117] p-4 mt-4 rounded-3xl shadow-md border border-[#6B6B6B]">
+        <h3 className="text-lg font-semibold text-white mb-2">계정 정보</h3>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-white">이름</span>
+          <span className="font-medium text-[#63FF70]">{userName}</span>
+        </div>
+        <div className="flex justify-between items-center py-2">
+          <span className="text-white">{auth.isSocial ? '로그인 방식' : '이메일'}</span>
+          <span className="font-medium text-gray-800">
+            {auth.isSocial ? <span className="text-[#FBD300] font-bold">카카오 로그인</span> : userEmail}
+          </span>
         </div>
       </div>
 
-      {/* 2. 하단 버튼 영역 */}
-      <div>
-        {/* 💡 [수정] 루트 div로 pb-16을 옮겼으므로, 여기서는 pb-4로 충분한 여백만 남깁니다. */}
-        <div className="space-y-3 pb-4">
+      {/* 💡 [핵심 수정] 하단 버튼 영역을 position: fixed로 화면 하단에 고정합니다. */}
+      <div className="fixed bottom-16 left-0 right-0 max-w-sm mx-auto p-4 bg-black">
+        {/* 
+          bottom-16: FooterNav의 높이(h-16)만큼 위로 띄웁니다.
+          max-w-sm mx-auto: App.jsx의 main 태그와 동일한 너비 및 중앙 정렬을 유지합니다.
+        */}
+        <div className="space-y-3">
           <button
             onClick={() => auth.logout('user')}
             className="block text-red-500 hover:text-red-400 transition-colors text-sm"
