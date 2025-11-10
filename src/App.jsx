@@ -47,6 +47,7 @@ const AppContent = () => {
   const location = useLocation();
   const isFormationPage = location.pathname.includes('/formation');
   const isProfilePage = location.pathname === '/profile';
+  const isTeamDetailPage = /^\/teams\/\d+$/.test(location.pathname);
   const isLoginPage = location.pathname === '/';
   const mainRef = useRef(null);
 
@@ -60,8 +61,8 @@ const AppContent = () => {
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage
             ? 'pt-14' // 포메이션 페이지는 하단 패딩 없음
-            : isProfilePage
-            ? 'pt-14' // 💡 [수정] 프로필 페이지는 하단 패딩 없음
+            : isProfilePage || isTeamDetailPage
+            ? 'pt-14' // 💡 [수정] ProfilePage와 TeamDetailPage는 하단 패딩을 적용하지 않습니다.
             : 'pt-14 pb-16' // 나머지 페이지는 상하단 패딩 모두 적용
         }`}
         ref={mainRef}

@@ -10,9 +10,9 @@ export const API_BASE_URL = `${RENDER_BASE_URL}/api`;
 export class ApiClient {
   // 💡 [수정] 생성자에서 authContext 전체 대신 setTokens와 logout 함수만 받습니다.
   // 이렇게 하면 ApiClient가 accessToken, refreshToken 같은 상태 값에 직접 의존하지 않게 됩니다.
-  constructor(setTokens, logout) {
-    this.setTokens = setTokens;
+  constructor(refreshTokens, logout) {
     // 💡 [추가] 토큰 재발급 로직의 경쟁 상태를 방지하기 위한 변수
+    this.refreshTokens = refreshTokens;
     this.isRefreshing = false;
     this.failedQueue = [];
 
@@ -83,8 +83,8 @@ export class ApiClient {
               // 💡 [수정] 서버로부터 새로운 accessToken과 refreshToken을 받습니다.
               const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-              // 💡 [수정] 새로운 토큰으로 업데이트합니다. email과 username은 재발급 시 받지 않으므로 null 처리합니다.
-              this.setTokens(newAccessToken, newRefreshToken, null, null);
+              // 💡 [핵심 수정] 사용자 정보를 건드리지 않고 토큰만 갱신하는 새 함수를 호출합니다.
+              this.refreshTokens(newAccessToken, newRefreshToken);
               processFailedQueue(null, newAccessToken); // 💡 대기 중인 요청들 재개
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
@@ -156,9 +156,9 @@ export class ApiClient {
 
 // Custom Hook: API 클라이언트를 사용하기 쉽게 제공
 export const useApiClient = () => {
-  // 💡 [수정] AuthContext에서 setTokens와 logout 함수만 가져옵니다.
-  const { setTokens, logout } = useContext(AuthContext);
+  // 💡 [수정] AuthContext에서 refreshTokens와 logout 함수만 가져옵니다.
+  const { refreshTokens, logout } = useContext(AuthContext);
 
   // 💡 [수정] ApiClient가 더 이상 상태 값에 의존하지 않으므로, 의존성 배열에서 상태 관련 값들을 제거합니다.
-  return useMemo(() => new ApiClient(setTokens, logout), [setTokens, logout]);
+  return useMemo(() => new ApiClient(refreshTokens, logout), [refreshTokens, logout]);
 };

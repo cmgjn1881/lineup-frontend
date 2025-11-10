@@ -77,17 +77,21 @@ export const AuthProvider = ({ children }) => {
     [clearAuthData]
   );
 
-  // 토큰 저장 및 상태 업데이트
-  const setTokens = useCallback(
+  // 💡 [신규] 토큰만 갱신하는 함수
+  const refreshTokens = useCallback((newAccess, newRefresh) => {
+    setAccessToken(newAccess);
+    setRefreshToken(newRefresh);
+    localStorage.setItem('accessToken', newAccess);
+    localStorage.setItem('refreshToken', newRefresh);
+  }, []);
+
+  // 💡 [수정] setTokens 함수의 이름을 login으로 변경하고 역할을 명확히 함
+  const login = useCallback(
     (newAccess, newRefresh, email, name) => {
-      setAccessToken(newAccess);
-      setRefreshToken(newRefresh);
-      localStorage.setItem('accessToken', newAccess);
-      localStorage.setItem('refreshToken', newRefresh);
+      // 토큰 갱신
+      refreshTokens(newAccess, newRefresh);
 
-      setIsAuthenticated(true);
-      localStorage.setItem('isSocial', 'false');
-
+      // 사용자 정보 저장
       if (email) {
         setUserEmail(email);
         localStorage.setItem('userEmail', email);
@@ -96,8 +100,10 @@ export const AuthProvider = ({ children }) => {
         setUserName(name);
         localStorage.setItem('userName', name);
       }
+      setIsAuthenticated(true);
+      localStorage.setItem('isSocial', 'false'); // 일반 로그인이므로 isSocial은 false
     },
-    [setAccessToken, setRefreshToken, setIsAuthenticated, setUserEmail, setUserName]
+    [refreshTokens]
   );
 
   const loginWithToken = useCallback(
@@ -125,7 +131,9 @@ export const AuthProvider = ({ children }) => {
     [setAccessToken, setRefreshToken, setUserId, setUserName, setIsSocial, setIsAuthenticated, logout]
   );
 
-  const api = useMemo(() => new ApiClient(setTokens, logout), [setTokens, logout]);
+  // 💡 [수정] ApiClient 생성자에 setTokens 대신 refreshTokens를 전달합니다.
+  // withdraw 함수 내에서 사용되는 api 인스턴스가 토큰 재발급 로직을 올바르게 사용하도록 수정합니다.
+  const api = useMemo(() => new ApiClient(refreshTokens, logout), [refreshTokens, logout]);
 
   const withdraw = useCallback(async () => {
     const isConfirmed = window.confirm('정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.');
@@ -170,7 +178,8 @@ export const AuthProvider = ({ children }) => {
       isLoading,
       accessToken,
       refreshToken,
-      setTokens,
+      login, // 💡 이름 변경
+      refreshTokens, // 💡 신규 함수 추가
       loginWithToken,
       logout,
       withdraw,
@@ -185,7 +194,8 @@ export const AuthProvider = ({ children }) => {
       isSocial,
       accessToken,
       refreshToken,
-      setTokens,
+      login,
+      refreshTokens,
       loginWithToken,
       logout,
       withdraw,

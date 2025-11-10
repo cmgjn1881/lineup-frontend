@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
-import { Trash2 } from 'lucide-react';
 import GreenBtn from '../components/common/GreenBtn';
 import TextInput from '../components/common/TextInput';
 import cancelIcon from '../assets/cancel.svg';
@@ -86,7 +85,7 @@ const TeamPage = () => {
               key={team.teamId}
               to={`/teams/${team.teamId}`}
               state={{ team: team }}
-              className="w-full text-left bg-[#0D1117] p-4 border border-[#6B6B6B] rounded-xl shadow-md flex justify-between items-center transition duration-150 hover:shadow-lg hover:border-[#63FF70] cursor-pointer"
+              className="w-full text-left bg-[#0D1117] p-4 border border-[#6B6B6B] rounded-2xl shadow-md flex justify-between items-center transition duration-150 hover:shadow-lg hover:border-[#63FF70] cursor-pointer"
             >
               <div>
                 <p className="text-xl font-semibold text-white">{team.name}</p>

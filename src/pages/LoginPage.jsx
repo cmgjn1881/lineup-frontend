@@ -26,7 +26,7 @@ const LoginPage = () => {
       const res = await api.login(email, password);
       //console.log('로그인 응답 데이터:', res.data);
       const { accessToken, refreshToken, email: userEmail, username: userName } = res.data;
-      auth.setTokens(accessToken, refreshToken, userEmail, userName);
+      auth.login(accessToken, refreshToken, userEmail, userName); // 💡 이름 변경: setTokens -> login
       navigate('/teams', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || '로그인 요청 처리 중 오류가 발생했습니다.');

@@ -39,33 +39,35 @@ const TeamDetailPage = ({ teamId }) => {
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-3xl font-extrabold mb-2 text-white flex items-center">{team.name}</h2>
+    <div className="p-4 h-full flex flex-col pb-16">
+      <h2 className="text-3xl font-extrabold mt-4 mb-4 text-white text-center">{team.name}</h2>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      <div className="pt-16 pr-8 pl-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 1. 팀 선수 관리 버튼 */}
-        <Link
-          to={`/teams/${teamId}/players`}
-          state={{ team: team }} // 팀 정보를 state로 전달
-          className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-3xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
-        >
-          <img src={playermanagement} alt="팀 선수 관리" className="w-10 h-10 mb-3" />
-          <h3 className="text-sm font-semibold text-white">팀 선수 관리</h3>
-          <p className="text-[#63FF70] mt-2 text-xs">선수를 추가, 수정, 삭제합니다.</p>
-        </Link>
+      <div className="grow flex flex-col justify-start pt-5 pl-7 pr-7">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* 1. 팀 선수 관리 버튼 */}
+          <Link
+            to={`/teams/${teamId}/players`}
+            state={{ team: team }} // 팀 정보를 state로 전달
+            className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-4xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
+          >
+            <img src={playermanagement} alt="팀 선수 관리" className="w-10 h-10 mb-3" />
+            <h3 className="text-sm font-semibold text-white">팀 선수 관리</h3>
+            <p className="text-[#63FF70] mt-2 text-xs">선수를 추가, 수정, 삭제합니다.</p>
+          </Link>
 
-        {/* 2. 포메이션 관리 버튼 */}
-        <Link
-          to={`/teams/${teamId}/formation`}
-          state={{ team: team }} // 팀 정보를 state로 전달
-          className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-3xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
-        >
-          <img src={formationmanagement} alt="포메이션 관리" className="w-10 h-10 mb-3" />
-          <h3 className="text-sm font-semibold text-white">포메이션 관리</h3>
-          <p className="text-[#63FF70] mt-2 text-xs">전술 및 기본 포메이션을 설정합니다.</p>
-        </Link>
+          {/* 2. 포메이션 관리 버튼 */}
+          <Link
+            to={`/teams/${teamId}/formation`}
+            state={{ team: team }} // 팀 정보를 state로 전달
+            className="p-6 bg-[#0D1117] border border-[#6B6B6B] rounded-4xl shadow-lg hover:shadow-xl transition duration-300 flex flex-col items-center text-center"
+          >
+            <img src={formationmanagement} alt="포메이션 관리" className="w-10 h-10 mb-3" />
+            <h3 className="text-sm font-semibold text-white">포메이션 관리</h3>
+            <p className="text-[#63FF70] mt-2 text-xs">전술 및 기본 포메이션을 설정합니다.</p>
+          </Link>
+        </div>
       </div>
     </div>
   );
