@@ -5,15 +5,11 @@ import { useAuth } from '../context/useAuth';
 
 const ProfilePage = () => {
   const auth = useAuth();
-
-  // auth.user에서 이메일을 가져오며, 없을 경우 '정보 없음'으로 표시
   const userEmail = auth.userEmail;
   const userName = auth.userName;
 
   return (
-    // 💡 [수정] flexbox를 사용하여 버튼 영역을 하단에 고정합니다.
     <div className="p-4 flex flex-col h-full">
-      {/* 1. 상단 컨텐츠 영역 (남은 공간을 모두 차지) */}
       <div className="grow">
         {/* 계정 정보 */}
         <div className="bg-[#0D1117] p-4 mt-4 rounded-3xl shadow-md border border-[#6B6B6B]">
@@ -33,8 +29,7 @@ const ProfilePage = () => {
 
       {/* 2. 하단 버튼 영역 */}
       <div>
-        {/* 💡 [수정] 버튼을 왼쪽 정렬하고, 텍스트 버튼 스타일로 변경합니다. */}
-        <div className="space-y-3 pb-4">
+        <div className="space-y-3 pb-16">
           <button
             onClick={() => auth.logout('user')}
             className="block text-red-500 hover:text-red-400 transition-colors text-sm"
@@ -54,7 +49,6 @@ const ProfilePage = () => {
             개인정보처리방침
           </a>
         </div>
-        {/* 💡 [수정] 안내 문구를 개인정보처리방침 링크로 변경합니다. */}
       </div>
     </div>
   );

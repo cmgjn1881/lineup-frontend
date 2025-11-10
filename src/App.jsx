@@ -14,7 +14,6 @@ import ScrollToTop from './components/ScrollToTop';
 import KakaoCallback from './pages/KakaoCallback';
 import Header from './components/common/Header';
 import FooterNav from './components/common/FooterNav';
-import { User, Briefcase, Shield } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
   const auth = useAuth();
@@ -47,6 +46,7 @@ const AuthRedirect = () => {
 const AppContent = () => {
   const location = useLocation();
   const isFormationPage = location.pathname.includes('/formation');
+  const isProfilePage = location.pathname === '/profile';
   const isLoginPage = location.pathname === '/';
   const mainRef = useRef(null);
 
@@ -60,7 +60,9 @@ const AppContent = () => {
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage
             ? 'pt-14' // 포메이션 페이지는 하단 패딩 없음
-            : 'pt-14 pb-16' // 나머지 페이지는 상하단 패딩 적용
+            : isProfilePage
+            ? 'pt-14' // 💡 [수정] 프로필 페이지는 하단 패딩 없음
+            : 'pt-14 pb-16' // 나머지 페이지는 상하단 패딩 모두 적용
         }`}
         ref={mainRef}
       >
@@ -72,11 +74,9 @@ const AppContent = () => {
   );
 };
 
-// ⚽️ [핵심 수정] createHashRouter를 사용하여 데이터 라우터를 생성합니다.
 const router = createHashRouter([
   {
     path: '/',
-    // 💡 [수정] AppContent를 모든 페이지의 공통 레이아웃으로 사용하고, 그 안에 자식 라우트를 정의합니다.
     element: <AppContent />,
     children: [
       // 1. 인증이 필요 없는 공용 라우트
@@ -129,7 +129,6 @@ const router = createHashRouter([
           </ProtectedRoute>
         ),
       },
-      // 3. 일치하는 라우트가 없을 경우 처리
       {
         path: '*',
         element: <Navigate to="/teams" replace />,
