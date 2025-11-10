@@ -54,8 +54,8 @@ const AppContent = () => {
   return (
     <>
       {!isLoginPage && <Header />}
-      <main // 💡 [수정] main 태그가 최상위 요소가 되도록 변경
-        className={`w-full flex-1 overflow-y-auto max-w-sm mx-auto bg-black ${
+      <main
+        className={`w-full flex-1 max-w-sm mx-auto bg-black ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage || isProfilePage || isTeamDetailPage

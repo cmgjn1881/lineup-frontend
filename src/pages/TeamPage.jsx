@@ -60,7 +60,8 @@ const TeamPage = () => {
   };
 
   return (
-    <div className="p-4">
+    // 💡 [핵심 수정] h-full과 overflow-y-auto를 추가하여 페이지 자체적으로 스크롤을 관리합니다.
+    <div className="p-4 h-full overflow-y-auto">
       <h1 className="font-bold text-white">팀 추가하기</h1>
       <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-6 pt-4 pb-4 border rounded-lg shadow-sm">
         <TextInput
