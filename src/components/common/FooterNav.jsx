@@ -18,8 +18,8 @@ const FooterNav = () => {
 
   // 모바일 앱 하단 탭 바 스타일
   return (
-    // 💡 [핵심 수정] fixed 관련 클래스를 모두 제거하여 일반 flex 아이템으로 만듭니다.
-    <footer className="w-full bg-black border-t border-[#6B6B6B] shadow-2xl">
+    // 💡 [핵심 수정] 다시 fixed 포지셔닝을 사용하여 뷰포트 하단에 고정합니다.
+    <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-[#6B6B6B] shadow-2xl z-20">
       <div className="max-w-sm mx-auto flex justify-around items-center h-16">
         {/* 1. 팀 관리 (TeamPage) 버튼 */}
         <Link // 🔑 a 태그 대신 Link 사용

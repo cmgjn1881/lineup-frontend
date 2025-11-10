@@ -45,7 +45,7 @@ const AuthRedirect = () => {
 
 const AppContent = () => {
   const location = useLocation();
-  //const isFormationPage = location.pathname.includes('/formation');
+  const isFormationPage = location.pathname.includes('/formation');
   const isProfilePage = location.pathname === '/profile';
   //const isTeamDetailPage = /^\/teams\/\d+$/.test(location.pathname);
   const isLoginPage = location.pathname === '/';
@@ -53,20 +53,22 @@ const AppContent = () => {
 
   return (
     // 💡 [핵심 수정] AppContent의 구조를 변경하여 fixed 헤더/푸터와 main 콘텐츠를 분리합니다.
-    // 이 div가 전체 화면 높이를 차지하고 Header, main, FooterNav를 세로로 배치하는 Flex 컨테이너가 됩니다.
-    <div className="flex flex-col h-full bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+    // Flexbox 레이아웃 대신, fixed 헤더/푸터와 padding으로 공간을 확보하는 표준 방식으로 변경합니다.
+    <>
       {!isLoginPage && <Header />}
-      {/* 💡 [핵심 수정] main 태그가 Header와 FooterNav를 제외한 나머지 공간을 모두 차지하도록 grow를 사용합니다. */}
-      {/* 이제 Header와 FooterNav가 fixed가 아니므로, main에 pt/pb 패딩은 필요 없습니다. */}
+      {/* 💡 [최종 수정] main 태그를 absolute 포지셔닝으로 변경하여 헤더/푸터 사이의 공간을 정확히 차지하도록 합니다. */}
+      {/* h-full과 padding을 함께 사용하던 문제를 근본적으로 해결합니다. */}
       <main
-        className={`w-full grow max-w-sm mx-auto bg-black ${isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'}`}
+        className={`w-full max-w-sm mx-auto bg-black absolute inset-x-0 ${
+          isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'
+        } ${isLoginPage ? 'top-0 bottom-0' : isFormationPage ? 'top-14 bottom-0' : 'top-14 bottom-16'}`}
         ref={mainRef}
       >
         <ScrollToTop targetRef={mainRef} />
         <Outlet />
       </main>
       {!isLoginPage && <FooterNav />}
-    </div>
+    </>
   );
 };
 
@@ -136,7 +138,7 @@ const router = createHashRouter([
 const App = () => (
   // 💡 [핵심 수정] h-dvh를 가진 최상위 레이아웃 컨테이너를 먼저 렌더링합니다.
   // 이 컨테이너는 앱의 생명주기 동안 절대 교체되지 않습니다.
-  <div className="h-dvh">
+  <div className="h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>

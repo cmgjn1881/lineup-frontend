@@ -28,8 +28,8 @@ const Header = () => {
   }
 
   return (
-    // 💡 [핵심 수정] fixed 관련 클래스를 모두 제거하여 일반 flex 아이템으로 만듭니다. h-14로 높이를 고정합니다.
-    <nav className="bg-black border-b border-[#6B6B6B] w-full h-14">
+    // 💡 [핵심 수정] 다시 fixed 포지셔닝을 사용하여 뷰포트 상단에 고정합니다.
+    <nav className="bg-black border-b border-[#6B6B6B] fixed top-0 left-0 w-full z-10 h-14">
       <div className="max-w-sm mx-auto px-4">
         <div className="flex items-center h-14">
           {showBackButton && (
