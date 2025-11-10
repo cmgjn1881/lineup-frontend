@@ -29,7 +29,6 @@ const ProfilePage = () => {
 
       {/* 2. 하단 버튼 영역 (flex 컨테이너의 맨 아래에 위치) */}
       {/* mt-auto: 상단에 자동 마진을 주어 아래로 밀어냅니다. */}
-      {/* 💡 [최종 수정] App.jsx의 main이 정확한 높이를 가지므로, 내부에서 추가 패딩은 필요 없습니다. */}
       <div className="mt-auto">
         <div className="space-y-3 p-4">
           <button

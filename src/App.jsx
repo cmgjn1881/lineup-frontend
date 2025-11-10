@@ -136,9 +136,8 @@ const router = createHashRouter([
 ]);
 
 const App = () => (
-  // 💡 [핵심 수정] h-dvh를 가진 최상위 레이아웃 컨테이너를 먼저 렌더링합니다.
-  // 이 컨테이너는 앱의 생명주기 동안 절대 교체되지 않습니다.
-  <div className="h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+  // 💡 [최종 수정] h-dvh 대신 h-full을 사용하여 부모(#root)의 높이를 100% 채웁니다.
+  <div className="h-full bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>

@@ -22,12 +22,18 @@ a:hover {
   color: #535bf2;
 }
 
+/* 💡 [최종 수정] html, body, #root의 높이를 100%로 통일하여 뷰포트 높이 충돌을 원천적으로 방지합니다. */
+html,
 body {
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  /* 💡 [핵심 수정] body 자체에서 스크롤이 발생하는 것을 원천적으로 방지합니다. */
+  padding: 0;
+  height: 100%;
   overflow: hidden;
+}
+
+/* React 앱의 루트 컨테이너 */
+#root {
+  height: 100%;
 }
 
 h1 {
