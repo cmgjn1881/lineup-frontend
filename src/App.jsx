@@ -52,17 +52,16 @@ const AppContent = () => {
   const mainRef = useRef(null);
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    // 💡 [핵심 수정] h-screen을 h-dvh로 변경하여 모바일 브라우저의 동적 높이에 대응합니다.
+    <div className="flex flex-col h-dvh bg-black">
       {!isLoginPage && <Header />}
       {/* 💡 [수정] main 태그로 스타일을 통합하고, 내부의 불필요한 div를 제거합니다. */}
       <main
         className={`w-full flex-1 overflow-y-auto max-w-sm mx-auto bg-black ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
-            : isFormationPage
-            ? 'pt-14' // 포메이션 페이지는 하단 패딩 없음
-            : isProfilePage || isTeamDetailPage
-            ? 'pt-14' // 💡 [수정] ProfilePage와 TeamDetailPage는 하단 패딩을 적용하지 않습니다.
+            : isFormationPage || isProfilePage || isTeamDetailPage
+            ? 'pt-14' // 💡 [수정] 스크롤이 필요 없는 페이지들은 하단 패딩을 적용하지 않습니다.
             : 'pt-14 pb-16' // 나머지 페이지는 상하단 패딩 모두 적용
         }`}
         ref={mainRef}
