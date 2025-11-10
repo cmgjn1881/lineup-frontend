@@ -429,7 +429,7 @@ const FormationPage = ({ teamId }) => {
                   left: `${player.x}%`,
                   transform: 'translate(-50%, -50%)',
                   zIndex: player.id === draggingId ? 10 : 1, // 드래그 중인 요소를 위로 올림
-                  touchAction: 'pan-y', // ⚽️ 세로 스크롤은 항상 허용
+                  touchAction: 'none', // ⚽️ 드래그 중 브라우저의 스크롤/새로고침 동작 방지
                 }}
               >
                 <PlayerIcon player={player} shirtColor="bg-blue-600" />
