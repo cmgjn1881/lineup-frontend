@@ -203,13 +203,15 @@ export const AuthProvider = ({ children }) => {
     ]
   );
 
-  // 💡 [핵심 수정] 로딩 중일 때는 앱의 어떤 부분도 렌더링하지 않습니다.
-  // 이렇게 하면 자식 컴포넌트(App.jsx의 RouterProvider)가 불완전한 인증 상태로
-  // 렌더링되는 것을 원천적으로 막을 수 있습니다.
   if (isLoading) {
-    // 여기서 전체 화면 로딩 스피너를 보여줘도 좋지만,
-    // 새로고침 시 깜빡임을 최소화하기 위해 null을 반환하는 것이 더 나을 수 있습니다.
-    return null;
+    // 💡 [수정] null 대신 로딩 스피너를 포함한 최소한의 레이아웃을 렌더링합니다.
+    return (
+      <div className="flex flex-col h-dvh bg-black">
+        <div className="flex-1 flex justify-center items-center">
+          {/* 로딩 스피너나 간단한 메시지를 여기에 넣을 수 있습니다. */}
+        </div>
+      </div>
+    );
   }
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
