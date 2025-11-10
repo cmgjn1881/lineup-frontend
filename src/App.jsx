@@ -136,15 +136,15 @@ const router = createHashRouter([
 ]);
 
 const App = () => (
-  // 💡 [핵심 수정] AuthProvider가 로딩 상태를 내부에서만 처리하고,
-  // 레이아웃은 항상 이 바깥쪽 컨테이너가 책임지도록 구조를 변경합니다.
-  <AuthProvider>
-    {/* 이 div가 앱의 생명주기 동안 절대 교체되지 않는 유일한 h-dvh 컨테이너가 됩니다. */}
-    <div className="flex flex-col h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {/* AuthProvider의 로딩 상태와 관계없이 RouterProvider는 항상 렌더링됩니다. */}
+  // 💡 [핵심 수정] h-dvh를 가진 최상위 레이아웃 컨테이너를 먼저 렌더링합니다.
+  // 이 컨테이너는 앱의 생명주기 동안 절대 교체되지 않습니다.
+  <div className="flex flex-col h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+    {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
+    {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
+    <AuthProvider>
       <RouterProvider router={router} />
-    </div>
-  </AuthProvider>
+    </AuthProvider>
+  </div>
 );
 
 export default App;
