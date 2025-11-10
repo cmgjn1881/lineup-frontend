@@ -45,32 +45,28 @@ const AuthRedirect = () => {
 
 const AppContent = () => {
   const location = useLocation();
-  const isFormationPage = location.pathname.includes('/formation');
+  //const isFormationPage = location.pathname.includes('/formation');
   const isProfilePage = location.pathname === '/profile';
-  const isTeamDetailPage = /^\/teams\/\d+$/.test(location.pathname);
+  //const isTeamDetailPage = /^\/teams\/\d+$/.test(location.pathname);
   const isLoginPage = location.pathname === '/';
   const mainRef = useRef(null);
 
   return (
     // 💡 [핵심 수정] AppContent의 구조를 변경하여 fixed 헤더/푸터와 main 콘텐츠를 분리합니다.
-    <>
+    // 이 div가 전체 화면 높이를 차지하고 Header, main, FooterNav를 세로로 배치하는 Flex 컨테이너가 됩니다.
+    <div className="flex flex-col h-full bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
       {!isLoginPage && <Header />}
-      {/* 💡 [핵심 수정] main 태그가 전체 화면을 차지하고, Header와 FooterNav의 높이만큼 패딩을 줍니다. */}
+      {/* 💡 [핵심 수정] main 태그가 Header와 FooterNav를 제외한 나머지 공간을 모두 차지하도록 grow를 사용합니다. */}
+      {/* 이제 Header와 FooterNav가 fixed가 아니므로, main에 pt/pb 패딩은 필요 없습니다. */}
       <main
-        className={`w-full h-full max-w-sm mx-auto bg-black overflow-y-auto ${
-          isLoginPage
-            ? '' // 로그인 페이지는 패딩 없음
-            : isFormationPage || isProfilePage || isTeamDetailPage
-            ? 'pt-14' // 💡 [수정] 스크롤이 필요 없는 페이지들은 하단 패딩을 적용하지 않습니다.
-            : 'pt-14 pb-16' // 나머지 페이지는 상하단 패딩 모두 적용
-        }`}
+        className={`w-full grow max-w-sm mx-auto bg-black ${isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'}`}
         ref={mainRef}
       >
         <ScrollToTop targetRef={mainRef} />
         <Outlet />
       </main>
-      {!isLoginPage && <FooterNav />} {/* FooterNav는 이제 fixed bottom-0 */}
-    </>
+      {!isLoginPage && <FooterNav />}
+    </div>
   );
 };
 
@@ -140,7 +136,7 @@ const router = createHashRouter([
 const App = () => (
   // 💡 [핵심 수정] h-dvh를 가진 최상위 레이아웃 컨테이너를 먼저 렌더링합니다.
   // 이 컨테이너는 앱의 생명주기 동안 절대 교체되지 않습니다.
-  <div className="flex flex-col h-dvh bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+  <div className="h-dvh">
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>

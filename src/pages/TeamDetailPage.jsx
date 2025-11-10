@@ -39,11 +39,11 @@ const TeamDetailPage = ({ teamId }) => {
   }
 
   return (
-    <div className="p-4 h-full flex flex-col pb-16">
+    <div className="p-4 h-full flex flex-col">
+      {' '}
+      {/* pb-16은 App.jsx의 main에서 처리되므로 여기서는 필요 없습니다. */}
       <h2 className="text-3xl font-extrabold mt-4 mb-4 text-white text-center">{team.name}</h2>
-
       {error && <p className="text-red-500 mb-4">{error}</p>}
-
       <div className="grow flex flex-col justify-start pt-5 pl-7 pr-7">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* 1. 팀 선수 관리 버튼 */}
