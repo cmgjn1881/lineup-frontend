@@ -9,7 +9,7 @@ const ProfilePage = () => {
   const userName = auth.userName;
 
   return (
-    // 💡 [수정] 불필요한 flex, h-full, pb-16을 제거하고, 콘텐츠 영역만 남깁니다.
+    // 💡 [수정] 불필요한 flex, h-full을 제거하고, 콘텐츠 영역만 남깁니다.
     <div className="p-4">
       {/* 계정 정보 */}
       <div className="bg-[#0D1117] p-4 mt-4 rounded-3xl shadow-md border border-[#6B6B6B]">

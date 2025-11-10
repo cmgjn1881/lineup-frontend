@@ -52,12 +52,12 @@ const AppContent = () => {
   const mainRef = useRef(null);
 
   return (
-    // 💡 [핵심 수정] AppContent를 감싸는 flex-col 컨테이너를 다시 만듭니다.
-    <div className="flex flex-col h-full">
+    // 💡 [핵심 수정] AppContent의 구조를 변경하여 fixed 헤더/푸터와 main 콘텐츠를 분리합니다.
+    <>
       {!isLoginPage && <Header />}
-      {/* 💡 [핵심 수정] main 태그에 flex-1을 다시 추가하여 남는 공간을 모두 채우도록 합니다. */}
+      {/* 💡 [핵심 수정] main 태그가 전체 화면을 차지하고, Header와 FooterNav의 높이만큼 패딩을 줍니다. */}
       <main
-        className={`w-full flex-1 max-w-sm mx-auto bg-black ${
+        className={`w-full h-full max-w-sm mx-auto bg-black overflow-y-auto ${
           isLoginPage
             ? '' // 로그인 페이지는 패딩 없음
             : isFormationPage || isProfilePage || isTeamDetailPage
@@ -69,8 +69,8 @@ const AppContent = () => {
         <ScrollToTop targetRef={mainRef} />
         <Outlet />
       </main>
-      {!isLoginPage && <FooterNav />}
-    </div>
+      {!isLoginPage && <FooterNav />} {/* FooterNav는 이제 fixed bottom-0 */}
+    </>
   );
 };
 
