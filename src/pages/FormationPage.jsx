@@ -1,6 +1,6 @@
 // src/pages/FormationPage.jsx
 
-import React, { useState, useEffect } from 'react'; // 🔑 Hooks 유지
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FootballPitch from '../components/FootballPitch';
 import PlayerIcon from '../components/PlayerIcon';
@@ -8,8 +8,8 @@ import PlayerListPanel from '../components/PlayerListPanel';
 import { Shield, RotateCcw, List, Save } from 'lucide-react';
 import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
-import { useFormationDrag } from '../hooks/useFormationDrag'; // 🔑 useFormationDrag 훅 임포트
-import { useBlocker } from 'react-router-dom'; // ⚽️ [추가] React Router의 useBlocker 훅
+import { useFormationDrag } from '../hooks/useFormationDrag';
+import { useBlocker } from 'react-router-dom';
 import FormationNameModal from '../components/FormationNameModal';
 import FormationLoadModal from '../components/FormationLoadModal';
 import PlayerDetailModal from '../components/PlayerDetailModal';
@@ -364,7 +364,7 @@ const FormationPage = ({ teamId }) => {
       {/* 🔑 [수정] H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
       <div className="px-4 mt-1 flex justify-between items-center">
         {/* 1. 팀 이름 (왼쪽 정렬) */}
-        <h2 className="text-xl font-bold flex items-center text-gray-800 flex-shrink">
+        <h2 className="text-xl font-bold flex items-center text-gray-800 shrink">
           <Shield className="w-6 h-6 mr-2" />
           {teamName}
 

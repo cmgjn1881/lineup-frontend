@@ -61,6 +61,9 @@ const AppContent = () => {
       <main
         className={`w-full max-w-full mx-auto bg-black absolute inset-x-0 ${
           isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'
+        } ${
+          // 💡 [핵심 수정] 포메이션 페이지에서 '당겨서 새로고침' 방지
+          isFormationPage ? 'overscroll-y-contain' : ''
         } ${isLoginPage ? 'top-0 bottom-0' : isFormationPage ? 'top-14 bottom-0' : 'top-14 bottom-16'}`}
         ref={mainRef}
       >
