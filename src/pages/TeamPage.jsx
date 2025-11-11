@@ -6,7 +6,7 @@ import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
 import GreenBtn from '../components/common/GreenBtn';
 import TextInput from '../components/common/TextInput';
-import cancelIcon from '../assets/cancel.svg';
+import { CircleX } from 'lucide-react';
 
 const TeamPage = () => {
   const api = useApiClient();
@@ -102,7 +102,7 @@ const TeamPage = () => {
                   className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-950"
                   aria-label={`팀 ${team.name} 삭제`}
                 >
-                  <img src={cancelIcon} alt="삭제 아이콘" className="w-4 h-4" />
+                  <CircleX className="w-5 h-5" />
                 </button>
               </div>
             </Link>

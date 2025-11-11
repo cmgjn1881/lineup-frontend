@@ -16,7 +16,7 @@ const PlayerListModal = ({ isOpen, onClose, title, children }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="text-xl font-bold text-gray-800 flex-grow pr-4 truncate">{title}</h3>
+          <h3 className="text-xl font-bold text-gray-800 grow pr-4 truncate">{title}</h3>
 
           <button
             onClick={onClose}

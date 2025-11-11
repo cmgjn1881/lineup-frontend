@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
+import TextInput from './common/TextInput';
 
 const POSITION_OPTIONS = ['FW', 'MF', 'DF', 'GK'];
 
@@ -9,10 +10,10 @@ const POSITION_COLORS = {
   FW: 'bg-red-600 hover:bg-red-700', // 공격수 - 빨강
   MF: 'bg-green-600 hover:bg-green-700', // 미드필더 - 초록
   DF: 'bg-blue-600 hover:bg-blue-700', // 수비수 - 파랑
-  GK: 'bg-yellow-500 hover:bg-yellow-600', // 골키퍼 - 노랑 (글자색 대비를 위해 500 사용)
+  GK: 'bg-yellow-500 hover:bg-yellow-600', // 골키퍼 - 노랑
 };
 
-const DEFAULT_UNSELECTED_STYLE = 'bg-gray-200 text-gray-700 hover:bg-gray-300';
+const DEFAULT_UNSELECTED_STYLE = 'bg-[#0D1117] text-white hover:bg-gray-300 border border-[#6B6B6B]';
 
 const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propError, isSubmitting }) => {
   // 🔑 [수정] 초기 데이터가 없을 때 모든 필드를 명시적으로 빈 문자열("")로 설정
@@ -69,30 +70,21 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
   const currentError = propError || localError;
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 mb-6 border border-blue-200 rounded-lg shadow-md space-y-3 bg-white">
-      <p className="font-semibold text-lg text-blue-700">{submitLabel}</p>
+    <form onSubmit={handleSubmit} className="p-4 mb-3 border border-[#6B6B6B] rounded-3xl shadow-md space-y-3 bg-black">
+      <p className="block text-center font-semibold text-lg text-white">{submitLabel}</p>
 
       {currentError && <p className="text-red-500 text-sm">{currentError}</p>}
 
-      <input
-        type="text"
-        name="name"
-        placeholder="선수 이름 (예: 손흥민)"
-        value={formData.name}
-        onChange={handleChange}
-        required
-        className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-      />
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 block">포지션 선택 (FW, MF, DF, GK)</label>
-        <div className="flex justify-around space-x-2">
+        <label className="block text-center text-sm font-medium text-[#63FF70]">포지션 선택</label>
+        <div className="flex justify-around space-x-2 pt-1 pb-1">
           {POSITION_OPTIONS.map((pos) => (
             <button
               key={pos}
               type="button" // 폼 제출을 막기 위해 필수
               onClick={() => handlePositionSelect(pos)}
               className={`
-                px-3 py-2 rounded-lg font-semibold transition duration-150 w-full text-sm
+                px-3 py-2 rounded-xl font-semibold transition duration-150 w-full text-sm
                 ${
                   formData.position === pos
                     ? `${POSITION_COLORS[pos]} text-white shadow-md` // 선택된 스타일
@@ -105,8 +97,19 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
           ))}
         </div>
       </div>
-      <div className="flex space-x-3">
-        <input
+
+      <TextInput
+        type="text"
+        name="name"
+        placeholder="선수 이름 (예: 손흥민)"
+        value={formData.name}
+        onChange={handleChange}
+        required
+        className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+      />
+
+      <div className="flex space-x-3 pt-2 pb-1">
+        <TextInput
           type="number"
           name="backNumber"
           placeholder="등번호 (예: 7)"
@@ -115,14 +118,14 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
           required
           min="1"
           max="99"
-          className="w-1/3 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+          className="w-1/3 px-3 py-2 pt-1 pb-1 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
 
       <div className="flex space-x-3">
         <button
           type="submit"
-          className="flex-grow py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition duration-200 flex items-center justify-center"
+          className="w-full py-2 px-4 bg-green-500 text-white font-semibold rounded-xl shadow-md hover:bg-green-600 transition duration-200 flex items-center justify-center"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
@@ -136,7 +139,7 @@ const PlayerForm = ({ initialData, onSubmit, onCancel, submitLabel, error: propE
         <button
           type="button"
           onClick={onCancel}
-          className="py-2 px-4 bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:bg-gray-500 transition duration-200"
+          className="w-full py-2 px-4 bg-gray-400 text-white font-semibold rounded-xl shadow-md hover:bg-gray-500 transition duration-200"
           disabled={isSubmitting}
         >
           취소

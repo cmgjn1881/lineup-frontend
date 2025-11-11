@@ -4,7 +4,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import PlayerForm from '../components/PlayerForm'; // 🔑 PlayerForm 컴포넌트 import
-import { Users, Loader2, Plus, ArrowLeft, Trash2, Edit } from 'lucide-react'; // Trash2, Edit 아이콘 추가
+import { Users, Loader2, Plus, Edit, CircleX } from 'lucide-react';
+
+const POSITION_OPTIONS = ['FW', 'MF', 'DF', 'GK'];
+
+const POSITION_COLORS = {
+  FW: 'text-red-600', // 공격수 - 빨강
+  MF: 'text-green-600', // 미드필더 - 초록
+  DF: 'text-blue-600', // 수비수 - 파랑
+  GK: 'text-yellow-500', // 골키퍼 - 노랑
+};
 
 const PlayerListPage = ({ teamId }) => {
   const api = useApiClient();
@@ -181,10 +190,10 @@ const PlayerListPage = ({ teamId }) => {
   return (
     // 💡 [수정] main 태그가 스크롤을 담당하므로, 여기서는 overflow-y-auto를 제거합니다.
     <div className="p-4">
-      <h2 className="text-3xl font-bold flex items-center mb-6 text-gray-800">{teamName}</h2>
+      <h2 className="text-3xl font-bold flex items-center mb-6 text-white">{teamName}</h2>
       <div className="flex items-center text-gray-600 mb-4">
-        <Users className="w-5 h-5 mr-2 text-indigo-500" />
-        <span className="text-lg">선수 목록 ({playerCount}명)</span>
+        <Users className="w-5 h-5 mr-2 text-[#63FF70]" />
+        <span className="text-lg text-[#D9D9D9]">선수 목록 ({playerCount}명)</span>
       </div>
 
       {/* ... (로딩/에러 메시지 유지) ... */}
@@ -198,10 +207,8 @@ const PlayerListPage = ({ teamId }) => {
       {/* 🔑 새 선수 등록 버튼 (폼 열림/닫힘 제어) */}
       <button
         onClick={handleCreateClick}
-        className={`py-2 px-4 font-semibold rounded-lg shadow-md transition duration-200 flex items-center mb-6 
-            ${
-              isCreateFormOpen ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
+        className={`py-1 px-3 font-medium rounded-lg shadow-md transition duration-200 flex items-center mb-6 border
+            ${isCreateFormOpen ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[#0D1117 text-white'}`}
         disabled={isFormActive && !isCreateFormOpen} // 다른 폼(수정)이 열려있을 때만 비활성화
       >
         <Plus className="w-5 h-5 mr-1" /> {isCreateFormOpen ? '등록 취소' : '새 선수 등록'}
@@ -213,7 +220,7 @@ const PlayerListPage = ({ teamId }) => {
           initialData={initialFormData}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel} // 🔑 공통 닫기 함수
-          submitLabel={'선수 등록 완료'}
+          submitLabel={'선수 등록'}
           error={formError}
           isSubmitting={isSubmitting}
         />
@@ -227,13 +234,14 @@ const PlayerListPage = ({ teamId }) => {
             ) : (
               sortedPlayers.map((player) => (
                 <React.Fragment key={player.playerId}>
-                  <div className="bg-white p-4 border rounded-lg shadow-sm flex justify-between items-center">
+                  <div className="bg-[#0D1117] p-4 border border-[#6B6B6B] rounded-3xl shadow-sm flex justify-between items-center">
                     {/* 선수 정보 */}
                     <div>
-                      <p className="text-lg font-semibold">
-                        {player.position} {player.name}
+                      <p className="text-lg font-semibold text-white flex items-center">
+                        <span className={`text-lg mr-2 ${POSITION_COLORS[player.position]}`}>{player.position}</span>
+                        {player.name}
                       </p>
-                      <p className="text-sm text-gray-500">등번호: {player.backNumber || player.number}</p>
+                      <p className="text-sm text-[#D9D9D9]">등번호: {player.backNumber || player.number}</p>
                     </div>
 
                     {/* 🔑 수정/삭제 버튼 그룹 */}
@@ -241,7 +249,7 @@ const PlayerListPage = ({ teamId }) => {
                       {/* 수정 버튼 */}
                       <button
                         onClick={() => handleEditClick(player)}
-                        className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50 transition duration-150"
+                        className="text-[#A7A8A6] hover:text-blue-100 p-2 rounded-full hover:bg-blue-900 transition duration-150"
                         aria-label={`${player.name} 수정`}
                         disabled={isFormActive && editingPlayerId !== player.playerId}
                       >
@@ -251,21 +259,21 @@ const PlayerListPage = ({ teamId }) => {
                       {/* 삭제 버튼 */}
                       <button
                         onClick={() => handleDeletePlayer(player.playerId, player.name)}
-                        className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition duration-150"
+                        className="text-red-500 hover:text-red-100 p-2 rounded-full hover:bg-red-900 transition duration-150"
                         aria-label={`${player.name} 삭제`}
                         disabled={isDeleting === player.playerId || isFormActive}
                       >
                         {isDeleting === player.playerId ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
-                          <Trash2 className="w-5 h-5" />
+                          <CircleX className="w-5 h-5" />
                         )}
                       </button>
                     </div>
                   </div>
                   {/* 🔑 [핵심] 인라인 수정 폼 조건부 렌더링 */}
                   {editingPlayerId === player.playerId && (
-                    <div className="p-4 border border-indigo-300 rounded-lg bg-indigo-50/50 -mt-2 shadow-inner">
+                    <div className="p-1">
                       <PlayerForm
                         initialData={initialFormData}
                         onSubmit={handleFormSubmit}
