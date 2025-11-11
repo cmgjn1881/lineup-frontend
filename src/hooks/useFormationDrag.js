@@ -32,6 +32,10 @@ export const useFormationDrag = () => {
   const startPositionRef = useRef(null);
   const formationRef = useRef(currentFormation); // 최신 포메이션 상태 참조
 
+  const resetIsDirty = useCallback(() => {
+    setIsDirty(false);
+  }, []);
+
   // ⚽️ [추가] currentFormation이 변경될 때마다 초기 상태와 비교하여 isDirty 상태를 업데이트합니다.
   useEffect(() => {
     // JSON.stringify를 사용한 간단한 깊은 비교
@@ -387,5 +391,6 @@ export const useFormationDrag = () => {
     handleAssignPlayer,
     isDirty, // ⚽️ [추가] isDirty 상태를 외부로 노출
     loadFormation, // ⭐️ [핵심 추가] 포메이션 불러오기 함수 노출
+    resetIsDirty, // ⚽️ [추가] isDirty 상태 리셋 함수 노출
   };
 };

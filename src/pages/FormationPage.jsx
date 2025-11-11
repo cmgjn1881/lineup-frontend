@@ -1,20 +1,23 @@
 // src/pages/FormationPage.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FootballPitch from '../components/FootballPitch';
 import PlayerIcon from '../components/PlayerIcon';
 import PlayerListPanel from '../components/PlayerListPanel';
-import { Shield, RotateCcw, List, Save } from 'lucide-react';
+import { RotateCcw, List, CircleX, Download, Share2 } from 'lucide-react';
+import teamFormationIcon from '../assets/teamformation.svg';
 import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
 import { useFormationDrag } from '../hooks/useFormationDrag';
 import { useBlocker } from 'react-router-dom';
+import { useHeaderActions } from '../context/HeaderActionsContext.jsx';
 import FormationNameModal from '../components/FormationNameModal';
 import FormationLoadModal from '../components/FormationLoadModal';
 import PlayerDetailModal from '../components/PlayerDetailModal';
 
 const FormationPage = ({ teamId }) => {
+  const { setActions } = useHeaderActions();
   const location = useLocation();
   const navigate = useNavigate();
   const api = useApiClient();
@@ -70,6 +73,42 @@ const FormationPage = ({ teamId }) => {
     fetchTeamPlayers();
   }, [api, teamId]);
 
+  const handleLoad = useCallback(async () => {
+    setLoadError(null);
+    try {
+      // 1. API 호출: GET /api/formation?teamId={teamId}
+      const response = await api.getFormationList(teamId);
+
+      // 2. 상태 저장 및 모달 열기
+      setSavedFormations(response.data);
+      setIsLoadModalOpen(true);
+
+      console.log('포메이션 목록 조회 성공:', response.data);
+    } catch (error) {
+      console.error('포메이션 목록 조회 실패:', error.response?.data?.message || error.message);
+      setLoadError('포메이션 목록을 불러오는 데 실패했습니다.');
+      alert('포메이션 목록을 불러오는 데 실패했습니다.');
+    }
+  }, [api, teamId]); // api와 teamId가 변경되지 않는 한 함수는 재생성되지 않습니다.
+
+  // 헤더에 '리스트 목록' 버튼을 추가하기 위한 useEffect
+  useEffect(() => {
+    setActions(
+      <button
+        onClick={handleLoad}
+        className="p-2 text-white hover:bg-gray-700 rounded-full transition duration-150"
+        aria-label="포메이션 불러오기"
+      >
+        <List className="w-5 h-5" />
+      </button>
+    );
+
+    // 페이지를 벗어날 때(unmount) 헤더 버튼을 정리합니다.
+    return () => {
+      setActions(null);
+    };
+  }, [setActions, handleLoad]); // handleLoad는 useCallback으로 감싸는 것이 좋습니다.
+
   // Link State에서 팀 정보 추출
   const stateTeam = location.state?.team;
   const teamName = stateTeam?.name || `팀 ID ${teamId} (정보 없음)`;
@@ -91,22 +130,6 @@ const FormationPage = ({ teamId }) => {
     }
   }, [blocker]);
 
-  // 1. 필수 데이터 (팀 이름)가 없는 경우 즉시 오류 메시지 반환
-  if (!stateTeam?.name) {
-    return (
-      <div className="p-4 text-center text-red-600">
-        <h2 className="text-2xl font-bold mb-4">페이지 접근 오류</h2>
-        <p>팀 정보가 전달되지 않았습니다. 팀 상세 페이지를 통해 접근해 주세요.</p>
-        <button
-          onClick={() => navigate('/teams')}
-          className="mt-4 py-2 px-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
-        >
-          팀 목록으로 이동
-        </button>
-      </div>
-    );
-  }
-
   // 💡 버튼 클릭 핸들러 (뷰 로직)
   const handleReset = () => {
     const isConfirmed = window.confirm(
@@ -119,23 +142,6 @@ const FormationPage = ({ teamId }) => {
     }
   };
 
-  const handleLoad = async () => {
-    setLoadError(null);
-    try {
-      // 1. API 호출: GET /api/formation?teamId={teamId}
-      const response = await api.getFormationList(teamId);
-
-      // 2. 상태 저장 및 모달 열기
-      setSavedFormations(response.data);
-      setIsLoadModalOpen(true);
-
-      console.log('포메이션 목록 조회 성공:', response.data);
-    } catch (error) {
-      console.error('포메이션 목록 조회 실패:', error.response?.data?.message || error.message);
-      setLoadError('포메이션 목록을 불러오는 데 실패했습니다.');
-      alert('포메이션 목록을 불러오는 데 실패했습니다.');
-    }
-  };
   const handleSave = async () => {
     // 🔑 [핵심] 현재 포메이션 배열의 길이가 11인지 확인
     if (currentFormation.length !== 11) {
@@ -155,6 +161,22 @@ const FormationPage = ({ teamId }) => {
     // 이름 입력 모달을 띄웁니다.
     setIsSaveModalOpen(true);
   };
+
+  // 1. 필수 데이터 (팀 이름)가 없는 경우 즉시 오류 메시지 반환
+  if (!stateTeam?.name) {
+    return (
+      <div className="p-4 text-center text-red-600">
+        <h2 className="text-2xl font-bold mb-4">페이지 접근 오류</h2>
+        <p>팀 정보가 전달되지 않았습니다. 팀 상세 페이지를 통해 접근해 주세요.</p>
+        <button
+          onClick={() => navigate('/teams')}
+          className="mt-4 py-2 px-4 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
+        >
+          팀 목록으로 이동
+        </button>
+      </div>
+    );
+  }
 
   const handleConfirmSave = async () => {
     if (!newFormationName.trim()) {
@@ -362,10 +384,10 @@ const FormationPage = ({ teamId }) => {
   return (
     <div className="p-0">
       {/* 🔑 [수정] H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
-      <div className="px-4 mt-1 flex justify-between items-center">
+      <div className="px-4 flex justify-between items-center">
         {/* 1. 팀 이름 (왼쪽 정렬) */}
-        <h2 className="text-xl font-bold flex items-center text-gray-800 shrink">
-          <Shield className="w-6 h-6 mr-2" />
+        <h2 className="text-xl font-bold flex items-center text-white shrink">
+          <img src={teamFormationIcon} alt="포메이션 아이콘" className="w-6 h-6 mr-2" />
           {teamName}
 
           {currentFormationName && (
@@ -377,27 +399,29 @@ const FormationPage = ({ teamId }) => {
           {/* 초기화 버튼 */}
           <button
             onClick={handleReset}
-            className="p-2 text-sm text-red-500 hover:bg-gray-200 rounded-full transition duration-150"
+            className="p-2 text-sm text-red-500 hover:bg-red-900 rounded-full transition duration-150"
             aria-label="포메이션 초기화"
           >
             <RotateCcw className="w-5 h-5" />
           </button>
 
-          {/* 불러오기 버튼 */}
+          {/* 공유 버튼 (기능 구현 예정) */}
           <button
-            onClick={handleLoad}
-            className="p-2 text-sm hover:bg-gray-200 rounded-full transition duration-150"
-            aria-label="포메이션 불러오기"
+            onClick={() => {
+              /* TODO: 공유 기능 구현 */
+            }}
+            className="p-2 text-sm text-blue-500 hover:bg-blue-900 rounded-full transition duration-150"
+            aria-label="포메이션 공유"
           >
-            <List className="w-5 h-5" />
+            <Share2 className="w-5 h-5" />
           </button>
           {/* 저장 버튼 */}
           <button
             onClick={handleSave}
-            className="p-2 text-sm text-green-600 hover:bg-green-100 rounded-full transition duration-150"
+            className="p-2 text-sm text-green-600 hover:bg-green-900 rounded-full transition duration-150"
             aria-label="포메이션 저장"
           >
-            <Save className="w-5 h-5" />
+            <Download className="w-5 h-5" />
           </button>
         </div>
       </div>

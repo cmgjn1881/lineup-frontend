@@ -13,6 +13,7 @@ import FormationPage from './pages/FormationPage';
 import ScrollToTop from './components/ScrollToTop';
 import KakaoCallback from './pages/KakaoCallback';
 import Header from './components/common/Header';
+import HeaderActionsProvider from './context/HeaderActionsContext.jsx';
 import FooterNav from './components/common/FooterNav';
 
 const ProtectedRoute = ({ children }) => {
@@ -144,7 +145,9 @@ const App = () => (
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>
-      <RouterProvider router={router} />
+      <HeaderActionsProvider>
+        <RouterProvider router={router} />
+      </HeaderActionsProvider>
     </AuthProvider>
   </div>
 );

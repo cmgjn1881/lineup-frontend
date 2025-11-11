@@ -1,10 +1,12 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import backArrowIcon from '../../assets/arrow_back.svg';
+import { useHeaderActions } from '../../context/HeaderActionsContext.jsx';
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { actions } = useHeaderActions();
 
   const handleBack = () => {
     navigate(-1);
@@ -28,16 +30,20 @@ const Header = () => {
   }
 
   return (
-    // 💡 [핵심 수정] 다시 fixed 포지셔닝을 사용하여 뷰포트 상단에 고정합니다.
     <nav className="bg-black border-b border-[#6B6B6B] fixed top-0 left-0 w-full z-10 h-14">
       <div className="max-w-sm mx-auto px-4">
-        <div className="flex items-center h-14">
-          {showBackButton && (
-            <button onClick={handleBack} className="p-2 -ml-2">
-              <img src={backArrowIcon} alt="뒤로 가기" className="w-6 h-6" />
-            </button>
-          )}
-          <div className="text-white font-bold text-lg tracking-wider">{pageTitle}</div>
+        <div className="flex justify-between items-center h-14">
+          {/* 왼쪽 영역 (뒤로가기 버튼 + 페이지 제목) */}
+          <div className="flex items-center">
+            {showBackButton && (
+              <button onClick={handleBack} className="p-2 -ml-2">
+                <img src={backArrowIcon} alt="뒤로 가기" className="w-6 h-6" />
+              </button>
+            )}
+            <div className="text-white font-bold text-lg tracking-wider">{pageTitle}</div>
+          </div>
+          {/* 오른쪽 영역 (컨텍스트에서 받은 버튼 렌더링) */}
+          <div className="flex items-center">{actions}</div>
         </div>
       </div>
     </nav>
