@@ -56,6 +56,9 @@ const FormationPage = ({ teamId }) => {
     title: '',
     message: '',
     onConfirm: () => {}, // 확인 버튼을 눌렀을 때 실행될 함수
+    // 💡 [추가] 버튼 텍스트를 상태로 관리
+    confirmText: '확인',
+    cancelText: '취소',
   });
 
   // 현재 편집 중인 포메이션의 이름을 저장합니다.
@@ -139,6 +142,9 @@ const FormationPage = ({ teamId }) => {
         message: '저장되지 않은 변경사항이 있습니다.\n정말로 페이지를 나가시겠습니까?',
         onConfirm: () => blocker.proceed(), // '나가기' 클릭 시 페이지 이동
         onClose: () => blocker.reset(), // '머무르기' 클릭 시 이동 취소
+        // 💡 [추가] 페이지 이탈 상황에 맞는 버튼 텍스트
+        confirmText: '나가기',
+        cancelText: '머무르기',
       });
     }
   }, [blocker]);
@@ -154,6 +160,9 @@ const FormationPage = ({ teamId }) => {
         setCurrentFormationName(null);
         setEditingFormationId(null);
       },
+      // 💡 [추가] 초기화 상황에 맞는 버튼 텍스트 설정
+      confirmText: '초기화',
+      cancelText: '취소',
     });
   };
 
@@ -260,6 +269,9 @@ const FormationPage = ({ teamId }) => {
           toast.error('포메이션 삭제에 실패했습니다.');
         }
       },
+      // 삭제 상황에 맞는 버튼 텍스트
+      confirmText: '삭제',
+      cancelText: '취소',
     });
   };
 
@@ -274,6 +286,9 @@ const FormationPage = ({ teamId }) => {
         message: `"${formation.name}"을(를) 불러오면 현재 변경사항이 손실됩니다.\n계속 진행하시겠습니까?`,
         // '확인'을 누르면 분리해둔 로딩 함수를 실행합니다.
         onConfirm: () => proceedToLoadFormation(formation),
+        // 💡 [추가] 불러오기 상황에 맞는 버튼 텍스트
+        confirmText: '계속',
+        cancelText: '취소',
       });
     } else {
       // 2. 변경 사항이 없으면 바로 로딩 함수를 실행합니다.
@@ -537,8 +552,8 @@ const FormationPage = ({ teamId }) => {
           }
           setConfirmDialog({ ...confirmDialog, isOpen: false });
         }}
-        confirmText="나가기" // 이 경우엔 '나가기'가 더 명확할 수 있습니다.
-        cancelText="머무르기"
+        confirmText={confirmDialog.confirmText}
+        cancelText={confirmDialog.cancelText}
       />
     </div>
   );
