@@ -1,12 +1,34 @@
 // src/pages/ProfilePage.jsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/useAuth';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
   const auth = useAuth();
   const userEmail = auth.userEmail;
   const userName = auth.userName;
+
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const handleConfirmWithdraw = () => {
+    setIsConfirmOpen(false); // 다이얼로그 먼저 닫기
+
+    // 소셜 로그인이 아닐 경우에만 비밀번호를 물어봅니다.
+    if (!auth.isSocial) {
+      const password = window.prompt('계정 탈퇴를 위해 비밀번호를 입력해주세요.');
+      if (password === null) {
+        // 사용자가 '취소'를 누른 경우
+        toast('탈퇴가 취소되었습니다.');
+        return;
+      }
+      auth.executeWithdraw(password);
+    } else {
+      // 소셜 로그인이면 비밀번호 없이 바로 탈퇴 실행
+      auth.executeWithdraw(null);
+    }
+  };
 
   return (
     <div className="p-4 h-full flex flex-col">
@@ -38,7 +60,10 @@ const ProfilePage = () => {
             로그아웃
           </button>
 
-          <button onClick={auth.withdraw} className="block text-gray-400 hover:text-white transition-colors text-sm">
+          <button
+            onClick={() => setIsConfirmOpen(true)}
+            className="block text-gray-400 hover:text-white transition-colors text-sm"
+          >
             계정 탈퇴
           </button>
           <a
@@ -51,6 +76,15 @@ const ProfilePage = () => {
           </a>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirmWithdraw}
+        title="계정 탈퇴"
+        message={'정말로 계정을 탈퇴하시겠습니까?\n모든 팀과 선수 정보가 삭제되며, 이 작업은 되돌릴 수 없습니다.'}
+        confirmText="탈퇴"
+        cancelText="취소"
+      />
     </div>
   );
 };

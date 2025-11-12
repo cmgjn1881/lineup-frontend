@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FootballPitch from '../components/FootballPitch';
 import PlayerIcon from '../components/PlayerIcon';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import toast from 'react-hot-toast';
 import PlayerListPanel from '../components/PlayerListPanel';
 import { RotateCcw, List, CircleX, Download, Share2 } from 'lucide-react';
 import teamFormationIcon from '../assets/teamformation.svg';
@@ -48,6 +50,14 @@ const FormationPage = ({ teamId }) => {
   const [savedFormations, setSavedFormations] = useState([]);
   const [loadError, setLoadError] = useState(null);
 
+  // 💡 [추가] 다이얼로그를 제어할 공통 상태
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}, // 확인 버튼을 눌렀을 때 실행될 함수
+  });
+
   // 현재 편집 중인 포메이션의 이름을 저장합니다.
   const [editingFormationId, setEditingFormationId] = useState(null); // ⭐️ [전제] 수정 모드 ID 상태
   const [currentFormationName, setCurrentFormationName] = useState(null);
@@ -86,8 +96,9 @@ const FormationPage = ({ teamId }) => {
       console.log('포메이션 목록 조회 성공:', response.data);
     } catch (error) {
       console.error('포메이션 목록 조회 실패:', error.response?.data?.message || error.message);
-      setLoadError('포메이션 목록을 불러오는 데 실패했습니다.');
-      alert('포메이션 목록을 불러오는 데 실패했습니다.');
+      const errorMessage = '포메이션 목록을 불러오는 데 실패했습니다.';
+      setLoadError(errorMessage);
+      toast.error(errorMessage);
     }
   }, [api, teamId]); // api와 teamId가 변경되지 않는 한 함수는 재생성되지 않습니다.
 
@@ -122,43 +133,45 @@ const FormationPage = ({ teamId }) => {
   // 이 로직은 useEffect 안에서 처리하여 렌더링 중 사이드 이펙트를 방지하고, 무한 알림 버그를 해결합니다.
   useEffect(() => {
     if (blocker.state === 'blocked') {
-      if (window.confirm('저장되지 않은 변경사항이 있습니다. 정말로 페이지를 나가시겠습니까?')) {
-        blocker.proceed(); // 사용자가 '확인'을 누르면 내비게이션을 계속 진행합니다.
-      } else {
-        blocker.reset(); // 사용자가 '취소'를 누르면 내비게이션을 중단하고 blocker 상태를 초기화합니다.
-      }
+      setConfirmDialog({
+        isOpen: true,
+        title: '페이지를 나가시겠습니까?',
+        message: '저장되지 않은 변경사항이 있습니다.\n정말로 페이지를 나가시겠습니까?',
+        onConfirm: () => blocker.proceed(), // '나가기' 클릭 시 페이지 이동
+        onClose: () => blocker.reset(), // '머무르기' 클릭 시 이동 취소
+      });
     }
   }, [blocker]);
 
   // 💡 버튼 클릭 핸들러 (뷰 로직)
   const handleReset = () => {
-    const isConfirmed = window.confirm(
-      '정말로 현재 포메이션을 초기 상태로 되돌리시겠습니까? 저장되지 않은 변경 사항은 손실됩니다.'
-    );
-    if (isConfirmed) {
-      resetFormation(); // 🔑 훅에서 제공하는 초기화 함수 호출
-      setCurrentFormationName(null); // ⭐️ 이름 초기화
-      setEditingFormationId(null); // ⭐️ 수정 ID 초기화 (새 포메이션 모드)
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: '포메이션 초기화',
+      message: '정말로 현재 포메이션을 초기 상태로 되돌리시겠습니까?\n저장되지 않은 변경 사항은 손실됩니다.',
+      onConfirm: () => {
+        resetFormation(); // 훅에서 제공하는 초기화 함수 호출
+        setCurrentFormationName(null);
+        setEditingFormationId(null);
+      },
+    });
   };
 
   const handleSave = async () => {
     // 🔑 [핵심] 현재 포메이션 배열의 길이가 11인지 확인
     if (currentFormation.length !== 11) {
-      alert('저장할 수 없습니다: 포메이션에는 11명의 선수가 모두 필요합니다.');
+      toast.error('저장할 수 없습니다: 포메이션에는 11명의 선수가 모두 필요합니다.');
       console.warn('저장 실패: 선수 수 불일치');
       return;
     }
 
-    // 🔑 [핵심 수정] dbPlayerId가 null인 요소가 하나라도 있는지 확인합니다.
     const isComplete = currentFormation.every((player) => player.dbPlayerId !== null);
 
     if (!isComplete) {
-      alert('저장할 수 없습니다: 모든 포지션에 선수를 할당해 주세요.');
+      toast.error('저장할 수 없습니다: 모든 포지션에 선수를 할당해 주세요.');
       return;
     }
 
-    // 이름 입력 모달을 띄웁니다.
     setIsSaveModalOpen(true);
   };
 
@@ -180,7 +193,7 @@ const FormationPage = ({ teamId }) => {
 
   const handleConfirmSave = async () => {
     if (!newFormationName.trim()) {
-      alert('포메이션 이름을 입력해 주세요.');
+      toast.error('포메이션 이름을 입력해 주세요.');
       return;
     }
 
@@ -208,11 +221,11 @@ const FormationPage = ({ teamId }) => {
       if (editingFormationId) {
         // PUT /api/formation/{formationId} (수정)
         response = await api.updateFormation(editingFormationId, formationSaveData); // 🚨 API 메소드 확인
-        alert(`포메이션 "${nameToDisplay}"이(가) 성공적으로 수정되었습니다!`);
+        toast.success(`포메이션 "${nameToDisplay}"이(가) 성공적으로 수정되었습니다!`);
       } else {
         // POST /api/formation (생성)
         response = await api.saveTeamFormation(formationSaveData);
-        alert(`포메이션 "${nameToDisplay}"이(가) 성공적으로 저장되었습니다!`);
+        toast.success(`포메이션 "${nameToDisplay}"이(가) 성공적으로 저장되었습니다!`);
 
         // ⭐️ 생성 후 ID를 저장하여 즉시 수정 모드로 전환
         setEditingFormationId(response.data.formationId);
@@ -224,68 +237,70 @@ const FormationPage = ({ teamId }) => {
       // isDirty 상태를 false로 초기화하는 로직 추가 필요
     } catch (error) {
       console.error('포메이션 저장 중 API 오류:', error.response?.data?.message || error.message);
-      alert('포메이션 처리(저장/수정)에 실패했습니다. 콘솔을 확인하세요.');
+      toast.error('포메이션 처리(저장/수정)에 실패했습니다.');
     }
   };
 
   // 포메이션 삭제 핸들러
-  const handleDeleteFormation = async (formationId, formationName) => {
-    if (!window.confirm(`포메이션 "${formationName}"을(를) 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
-      return;
-    }
-
-    try {
-      // 🚨 [가정]: ApiClient에 deleteFormation 메소드가 정의되어 있다고 가정합니다.
-      await api.deleteFormation(formationId);
-
-      alert(`포메이션 "${formationName}"이(가) 성공적으로 삭제되었습니다.`);
-
-      // 삭제 후 목록을 새로 고칩니다.
-      handleLoad();
-    } catch (error) {
-      console.error('포메이션 삭제 실패:', error.response?.data?.message || error.message);
-      alert('포메이션 삭제에 실패했습니다. 콘솔을 확인하세요.');
-    }
+  const handleDeleteFormation = (formationId, formationName) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: '포메이션 삭제',
+      message: `포메이션 "${formationName}"을(를) 정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteFormation(formationId);
+          toast.success(`포메이션 "${formationName}"이(가) 성공적으로 삭제되었습니다.`);
+          // 삭제 후 목록을 새로 고칩니다.
+          // handleLoad는 모달을 다시 열기 때문에, 여기서는 모달을 닫고 목록만 갱신하는게 더 자연스러울 수 있습니다.
+          // 우선 기존 로직을 유지합니다.
+          handleLoad();
+        } catch (error) {
+          console.error('포메이션 삭제 실패:', error.response?.data?.message || error.message);
+          toast.error('포메이션 삭제에 실패했습니다.');
+        }
+      },
+    });
   };
 
   // 포메이션 목록 불러오기 핸들러 (선택 시 실행)
   const handleSelectFormation = async (formation) => {
     setIsLoadModalOpen(false);
 
+    if (isDirty) {
+      setConfirmDialog({
+        isOpen: true,
+        title: '포메이션 불러오기',
+        message: `"${formation.name}"을(를) 불러오면 현재 변경사항이 손실됩니다.\n계속 진행하시겠습니까?`,
+        // '확인'을 누르면 분리해둔 로딩 함수를 실행합니다.
+        onConfirm: () => proceedToLoadFormation(formation),
+      });
+    } else {
+      // 2. 변경 사항이 없으면 바로 로딩 함수를 실행합니다.
+      proceedToLoadFormation(formation);
+    }
+  };
+
+  // 💡 [추가] 실제 포메이션을 불러오는 로직을 별도 함수로 분리
+  const proceedToLoadFormation = async (formation) => {
     const formationId = formation.formationId;
     if (!formationId) return;
-
-    // 💡 저장되지 않은 변경 사항이 있을 때 사용자에게 경고 (UX 개선)
-    if (
-      isDirty &&
-      !window.confirm(`"${formation.name}"을(를) 불러오면 현재 변경사항이 손실됩니다. 계속 진행하시겠습니까?`)
-    ) {
-      return;
-    }
 
     try {
       // 1. 상세 조회 API 호출
       const response = await api.getFormationDetail(formationId);
-      const detailedFormation = response.data; // 서버에서 받은 상세 데이터
+      const detailedFormation = response.data;
 
       // 2. 훅이 이해할 수 있는 형식으로 데이터 변환
       const loadedPlacements = detailedFormation.placements.map((p) => ({
-        // ⭐️ [핵심 수정 1]: posKey를 p.playerPosition로 명확히 설정
         posKey: p.playerPosition,
         dbPlayerId: p.playerId,
         name: p.playerName,
-        position: p.playerPosition, // 선수 포지션
+        position: p.playerPosition,
         backNumber: p.playerBackNumber || p.number,
-
-        // 좌표 변환
         x: Math.round(p.coordX / 10),
         y: Math.round(p.coordY / 10),
-
-        // quarter, playerPosition 등 나머지 필드는 필요 시 추가
       }));
-
-      // 🚨 [디버깅] 변환된 배열을 확인합니다.
-      console.log('loadFormation에 전달할 loadedPlacements:', loadedPlacements);
 
       // 3. 훅의 상태 업데이트 함수 호출
       loadFormation(loadedPlacements);
@@ -293,10 +308,10 @@ const FormationPage = ({ teamId }) => {
       setEditingFormationId(formationId);
       setCurrentFormationName(detailedFormation.name);
 
-      alert(`포메이션 "${detailedFormation.name}"이(가) 경기장에 적용되었습니다.`);
+      toast.success(`포메이션 "${detailedFormation.name}"이(가) 경기장에 적용되었습니다.`);
     } catch (error) {
       console.error('포메이션 상세 조회 및 적용 실패:', error.response?.data?.message || error.message);
-      alert('포메이션을 불러오는 데 실패했습니다.');
+      toast.error('포메이션을 불러오는 데 실패했습니다.');
     }
   };
 
@@ -330,7 +345,7 @@ const FormationPage = ({ teamId }) => {
 
     handleAssignPlayer(selectedPlayerSlot.id, emptyPlayer);
 
-    alert(`선수 ${selectedPlayerSlot.name}을(를) 슬롯에서 제거했습니다.`);
+    toast.success(`선수 ${selectedPlayerSlot.name}을(를) 슬롯에서 제거했습니다.`);
 
     // 3. 모달 닫기 및 상태 초기화
     setSelectedPlayerSlot(null);
@@ -506,6 +521,25 @@ const FormationPage = ({ teamId }) => {
           onModify={handleModifyPlayer} // 수정 로직 연결
         />
       </div>
+      {/* 💡 [추가] 공통 확인 다이얼로그 렌더링 */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={() => {
+          confirmDialog.onConfirm();
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        }}
+        // 💡 [수정] onClose도 상태에 저장된 함수를 호출하도록 변경
+        onClose={() => {
+          if (confirmDialog.onClose) {
+            confirmDialog.onClose();
+          }
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        }}
+        confirmText="나가기" // 이 경우엔 '나가기'가 더 명확할 수 있습니다.
+        cancelText="머무르기"
+      />
     </div>
   );
 };

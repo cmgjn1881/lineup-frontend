@@ -23,7 +23,7 @@ const FootballPitch = forwardRef(({ children }, ref) => {
   return (
     <div
       ref={ref}
-      className="relative w-full aspect-[2/3] border-8 border-white rounded-md shadow-lg overflow-auto mx-auto"
+      className="relative w-full aspect-2/3 border-8 border-white rounded-md shadow-lg overflow-auto mx-auto"
       style={{
         backgroundImage: grassGradient, // 🔑 수정된 그라데이션 적용
         backgroundSize: '100% 100%',

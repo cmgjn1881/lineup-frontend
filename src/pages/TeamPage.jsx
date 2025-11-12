@@ -6,6 +6,8 @@ import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
 import GreenBtn from '../components/common/GreenBtn';
 import TextInput from '../components/common/TextInput';
+import toast from 'react-hot-toast';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { CircleX } from 'lucide-react';
 
 const TeamPage = () => {
@@ -15,13 +17,19 @@ const TeamPage = () => {
   const [newTeamName, setNewTeamName] = useState('');
   const [error, setError] = useState('');
 
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState(null); // { id, name }
+
   const fetchTeams = useCallback(async () => {
     try {
       const res = await api.getTeams();
       setTeams(res.data);
       setError('');
     } catch {
-      setError('팀 목록을 불러오지 못했습니다. (세션 만료 가능성)');
+      const errorMessage = '팀 목록을 불러오지 못했습니다. (세션 만료 가능성)';
+      setError(errorMessage);
+      // 💡 toast.error로 변경
+      toast.error(errorMessage);
     }
   }, [api]);
 
@@ -38,24 +46,38 @@ const TeamPage = () => {
 
     try {
       await api.createTeam(newTeamName);
+      toast.success(`'${newTeamName}' 팀이 생성되었습니다.`);
       setNewTeamName('');
       fetchTeams();
     } catch (err) {
-      setError(err.response?.data?.message || '팀 생성에 실패했습니다.');
+      const errorMessage = err.response?.data?.message || '팀 생성에 실패했습니다.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
-  const handleDeleteTeam = async (teamId, teamName) => {
-    if (!window.confirm(`정말로 팀 '${teamName}'을(를) 삭제하시겠습니까?`)) {
-      return;
-    }
+  const handleDeleteClick = (teamId, teamName) => {
+    setTeamToDelete({ id: teamId, name: teamName });
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!teamToDelete) return;
+    const { id, name } = teamToDelete;
+
     setError('');
+    setIsConfirmOpen(false); // 다이얼로그 닫기
+
     try {
-      await api.deleteTeam(teamId);
+      await api.deleteTeam(id);
       fetchTeams();
-      alert(`팀 '${teamName}'이(가) 성공적으로 삭제되었습니다.`);
+      // 💡 alert를 toast.success로 변경
+      toast.success(`팀 '${name}'이(가) 성공적으로 삭제되었습니다.`);
     } catch (err) {
-      setError(err.response?.data?.message || '팀 삭제에 실패했습니다. (권한 없음 확인)');
+      const errorMessage = err.response?.data?.message || '팀 삭제에 실패했습니다. (권한 없음 확인)';
+      setError(errorMessage);
+      // 💡 toast.error 추가
+      toast.error(errorMessage);
     }
   };
 
@@ -97,7 +119,7 @@ const TeamPage = () => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleDeleteTeam(team.teamId, team.name);
+                    handleDeleteClick(team.teamId, team.name);
                   }}
                   className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-950"
                   aria-label={`팀 ${team.name} 삭제`}
@@ -109,6 +131,14 @@ const TeamPage = () => {
           ))
         )}
       </div>
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="팀 삭제"
+        message={`정말로 '${teamToDelete?.name}' 팀을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`}
+        confirmText="삭제"
+      />
     </div>
   );
 };

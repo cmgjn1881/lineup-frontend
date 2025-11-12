@@ -1,6 +1,7 @@
 // src/App.jsx
 
 import React, { useRef } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { createHashRouter, RouterProvider, Outlet, Navigate, useParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/useAuth';
@@ -145,6 +146,15 @@ const App = () => (
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>
+      {/* 💡 [추가] react-hot-toast의 Toaster 컴포넌트 */}
+      {/* 앱 전체에서 토스트 알림을 띄울 수 있도록 최상단에 위치시킵니다. */}
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          style: { background: '#333', color: '#fff' },
+        }}
+      />
       <HeaderActionsProvider>
         <RouterProvider router={router} />
       </HeaderActionsProvider>

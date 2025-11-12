@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { API_BASE_URL, ApiClient } from '../api/ApiClient';
 import { AuthContext } from './AuthContextDefinition';
+import toast from 'react-hot-toast';
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -69,9 +70,9 @@ export const AuthProvider = ({ children }) => {
       clearAuthData();
 
       if (reason === 'session_expired') {
-        alert('세션이 만료되어 자동으로 로그아웃되었습니다. 다시 로그인해주세요.');
+        toast.error('세션이 만료되어 자동으로 로그아웃되었습니다. 다시 로그인해주세요.');
       } else {
-        alert('로그아웃되었습니다.');
+        toast.success('로그아웃되었습니다.');
       }
     },
     [clearAuthData]
@@ -135,38 +136,26 @@ export const AuthProvider = ({ children }) => {
   // withdraw 함수 내에서 사용되는 api 인스턴스가 토큰 재발급 로직을 올바르게 사용하도록 수정합니다.
   const api = useMemo(() => new ApiClient(refreshTokens, logout), [refreshTokens, logout]);
 
-  const withdraw = useCallback(async () => {
-    const isConfirmed = window.confirm('정말로 계정을 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.');
-    if (!isConfirmed) {
-      return;
-    }
+  const executeWithdraw = useCallback(
+    async (password) => {
+      try {
+        // isSocial 상태에 따라 password를 전달하거나 null을 전달
+        await api.withdraw(isSocial ? null : password);
 
-    let password = '';
-    if (!isSocial) {
-      password = window.prompt('계정 탈퇴를 위해 비밀번호를 입력해주세요.');
-      if (password === null) {
-        alert('탈퇴가 취소되었습니다.');
-        return;
+        toast.success('계정이 성공적으로 탈퇴되었습니다.');
+        clearAuthData();
+        window.location.href = '/'; // 로그인 페이지로 리디렉션
+      } catch (err) {
+        console.error('계정 탈퇴 실패:', err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          toast.error('인증 정보가 유효하지 않아 탈퇴 처리에 실패했습니다. 다시 로그인해 주세요.');
+        } else {
+          toast.error(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
+        }
       }
-    }
-
-    try {
-      await api.withdraw(isSocial ? null : password);
-
-      alert('계정이 성공적으로 탈퇴되었습니다.');
-
-      clearAuthData();
-
-      window.location.href = '/';
-    } catch (err) {
-      console.error('계정 탈퇴 실패:', err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        alert('인증 정보가 유효하지 않아 탈퇴 처리에 실패했습니다. 다시 로그인해 주세요.');
-      } else {
-        alert(err.response?.data?.message || '계정 탈퇴 중 오류가 발생했습니다.');
-      }
-    }
-  }, [api, isSocial, clearAuthData]);
+    },
+    [api, isSocial, clearAuthData]
+  );
 
   const authContextValue = useMemo(
     () => ({
@@ -182,7 +171,7 @@ export const AuthProvider = ({ children }) => {
       refreshTokens, // 💡 신규 함수 추가
       loginWithToken,
       logout,
-      withdraw,
+      executeWithdraw,
       clearAuthData,
     }),
     [
@@ -198,7 +187,7 @@ export const AuthProvider = ({ children }) => {
       refreshTokens,
       loginWithToken,
       logout,
-      withdraw,
+      executeWithdraw,
       clearAuthData,
     ]
   );
