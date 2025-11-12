@@ -1,5 +1,6 @@
 // src/components/FormationNameModal.jsx
 import React from 'react';
+import TextInput from './common/TextInput.jsx';
 
 const FormationNameModal = ({ isOpen, onClose, onConfirm, value, onChange }) => {
   if (!isOpen) return null;
@@ -9,23 +10,26 @@ const FormationNameModal = ({ isOpen, onClose, onConfirm, value, onChange }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-80">
-        <h3 className="text-xl font-bold mb-4">포메이션 이름 입력</h3>
-        <input
+    <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-black border border-[#6B6B6B] p-6 rounded-2xl shadow-xl w-80">
+        <h3 className="text-xl text-white text-center font-bold mb-4 pb-4">포메이션 저장</h3>
+        <TextInput
           type="text"
-          className="w-full p-2 border rounded-lg mb-4"
+          className="w-full mb-4"
           placeholder="예: 공격형 4-3-3"
           value={value}
           onChange={onChange}
         />
-        <div className="flex justify-end space-x-3">
-          <button onClick={onClose} className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">
+        <div className="pt-12 flex justify-center space-x-3">
+          <button
+            onClick={onClose}
+            className="py-1 px-4 bg-[#0D1117] text-white border border-[#6B6B6B] rounded-xl hover:bg-gray-400"
+          >
             취소
           </button>
           <button
             onClick={handleConfirm}
-            className="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="py-1 px-4 bg-green-600 text-white border border-[#6B6B6B] rounded-xl hover:bg-green-700"
             disabled={!value.trim()}
           >
             저장

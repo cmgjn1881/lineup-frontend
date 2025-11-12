@@ -384,14 +384,14 @@ const FormationPage = ({ teamId }) => {
   return (
     <div className="p-0">
       {/* 🔑 [수정] H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
-      <div className="px-4 flex justify-between items-center">
+      <div className="px-4 py-1 flex justify-between items-center">
         {/* 1. 팀 이름 (왼쪽 정렬) */}
         <h2 className="text-xl font-bold flex items-center text-white shrink">
           <img src={teamFormationIcon} alt="포메이션 아이콘" className="w-6 h-6 mr-2" />
           {teamName}
 
           {currentFormationName && (
-            <span className="ml-3 text-base font-semibold text-indigo-600">[{currentFormationName}]</span>
+            <span className="ml-3 text-base font-semibold text-[#D9D9D9]">{currentFormationName}</span>
           )}
         </h2>
         {/* 2. 기능 버튼 그룹 (오른쪽 정렬) */}

@@ -220,7 +220,7 @@ const PlayerListPage = ({ teamId }) => {
           initialData={initialFormData}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel} // 🔑 공통 닫기 함수
-          submitLabel={'선수 등록'}
+          submitLabel={'등록'}
           error={formError}
           isSubmitting={isSubmitting}
         />
@@ -278,7 +278,7 @@ const PlayerListPage = ({ teamId }) => {
                         initialData={initialFormData}
                         onSubmit={handleFormSubmit}
                         onCancel={handleFormCancel}
-                        submitLabel={'선수 정보 수정'}
+                        submitLabel={'수정'}
                         error={formError}
                         isSubmitting={isSubmitting}
                       />
