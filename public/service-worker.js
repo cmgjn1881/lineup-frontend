@@ -1,4 +1,6 @@
 // public/service-worker.js
+/* eslint-disable no-unused-vars */ // 💡 이 파일 내에서 '사용하지 않는 변수' 경고를 비활성화합니다.
+
 const CACHE_NAME = 'lineup-cache-v7'; // 💡 버전 번호를 올려줍니다.
 
 const urlsToCache = [
@@ -41,34 +43,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (request.method !== 'GET') {
-    return;
-  }
-
   const url = new URL(request.url);
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    return;
+
+  // 💡 [핵심 수정] API 요청은 '네트워크 우선' 전략을 사용합니다.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      // 1. 네트워크에 먼저 요청을 보냅니다.
+      fetch(request)
+        .then((networkResponse) => {})
+        .catch(async () => {
+          // 3. 네트워크 요청이 실패하면, 캐시에서 응답을 찾아 반환합니다. (오프라인 지원)
+          const cachedResponse = await caches.match(request);
+          return cachedResponse;
+        })
+    );
+    return; // API 요청 처리는 여기서 종료합니다.
   }
 
+  // 💡 [핵심 수정] 그 외의 정적 파일(JS, CSS, 이미지 등)은 '캐시 우선' 전략을 유지합니다.
+  // Stale-While-Revalidate: 캐시를 먼저 보여주고, 백그라운드에서 네트워크로 업데이트
   event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      // 1. 캐시에서 응답을 먼저 찾아봅니다.
-      const cachedResponse = await cache.match(request);
-
-      // 2. 네트워크에서 최신 리소스를 가져옵니다.
-      const fetchedResponsePromise = fetch(request)
-        .then((networkResponse) => {
-          // 유효한 응답일 경우에만 캐시에 저장합니다.
-          if (networkResponse && networkResponse.status === 200 && request.url.startsWith('http')) {
+    caches.match(request).then((cachedResponse) => {
+      const fetchedResponsePromise = fetch(request).then((networkResponse) => {
+        caches.open(CACHE_NAME).then((cache) => {
+          if (request.method === 'GET' && networkResponse && networkResponse.status === 200) {
             cache.put(request, networkResponse.clone());
           }
-          return networkResponse;
-        })
-        .catch(() => {
-          // 이 경우 cachedResponse가 반환됩니다.
         });
+        return networkResponse;
+      });
 
-      // 3. 캐시된 응답이 있으면 즉시 반환하고(빠른 로딩), 없으면 네트워크 응답을 기다립니다.
       return cachedResponse || fetchedResponsePromise;
     })
   );
