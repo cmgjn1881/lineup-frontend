@@ -1,7 +1,6 @@
 // public/service-worker.js
-/* eslint-disable no-unused-vars */ // 💡 이 파일 내에서 '사용하지 않는 변수' 경고를 비활성화합니다.
 
-const CACHE_NAME = 'lineup-cache-v7'; // 💡 버전 번호를 올려줍니다.
+const CACHE_NAME = 'lineup-cache-v8'; // 💡 버전 번호를 올려줍니다.
 
 const urlsToCache = [
   '/',
@@ -50,7 +49,16 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       // 1. 네트워크에 먼저 요청을 보냅니다.
       fetch(request)
-        .then((networkResponse) => {})
+        .then((networkResponse) => {
+          // 💡 [수정] 2. 요청이 성공하면, 응답을 캐시에 저장하고 앱으로 반환합니다.
+          return caches.open(CACHE_NAME).then((cache) => {
+            // GET 요청이고, 유효한 응답일 때만 캐시에 저장합니다. (POST, DELETE 등은 캐싱하지 않음)
+            if (request.method === 'GET' && networkResponse && networkResponse.status === 200) {
+              cache.put(request, networkResponse.clone());
+            }
+            return networkResponse; // 💡 [핵심] 받은 응답을 그대로 반환합니다.
+          });
+        })
         .catch(async () => {
           // 3. 네트워크 요청이 실패하면, 캐시에서 응답을 찾아 반환합니다. (오프라인 지원)
           const cachedResponse = await caches.match(request);
