@@ -15,17 +15,6 @@ const POSITION_COLORS = {
   GK: 'text-yellow-500', // 골키퍼 - 노랑
 };
 
-// 💡 [추가] 서비스 워커에 캐시 삭제를 요청하는 헬퍼 함수
-const clearApiCache = (url) => {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: 'CLEAR_CACHE',
-      url: url, // 예: '/api/teams/123/players'
-    });
-    console.log(`[App] 캐시 삭제 요청: ${url}`);
-  }
-};
-
 const PlayerListPage = ({ teamId }) => {
   const api = useApiClient();
   const location = useLocation();
@@ -100,8 +89,6 @@ const PlayerListPage = ({ teamId }) => {
         toast.success(`${formData.name} 선수가 등록되었습니다.`);
       }
 
-      clearApiCache(`/api/teams/${teamId}/players`);
-
       // 성공 후 폼 닫기 및 목록 새로고침
       handleFormCancel();
       fetchPlayers();
@@ -133,8 +120,6 @@ const PlayerListPage = ({ teamId }) => {
       // 🔑 삭제 API 호출
       await api.deletePlayer(teamId, id);
       toast.success(`${name} 선수가 성공적으로 삭제되었습니다.`);
-
-      clearApiCache(`/api/teams/${teamId}/players`);
 
       fetchPlayers();
     } catch (err) {

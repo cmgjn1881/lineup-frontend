@@ -10,16 +10,6 @@ import toast from 'react-hot-toast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { CircleX } from 'lucide-react';
 
-const clearApiCache = (url) => {
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: 'CLEAR_CACHE',
-      url: url,
-    });
-    console.log(`[App] 캐시 삭제 요청: ${url}`);
-  }
-};
-
 const TeamPage = () => {
   const api = useApiClient();
   const auth = useAuth();
@@ -59,8 +49,6 @@ const TeamPage = () => {
       toast.success(`'${newTeamName}' 팀이 생성되었습니다.`);
       setNewTeamName('');
 
-      clearApiCache('/api/teams');
-
       fetchTeams();
     } catch (err) {
       const errorMessage = err.response?.data?.message || '팀 생성에 실패했습니다.';
@@ -83,8 +71,6 @@ const TeamPage = () => {
 
     try {
       await api.deleteTeam(id);
-
-      clearApiCache('/api/teams');
 
       fetchTeams();
       toast.success(`팀 '${name}'이(가) 성공적으로 삭제되었습니다.`);
