@@ -92,3 +92,23 @@ self.addEventListener('activate', (event) => {
   // 서비스 워커가 활성화될 때, 현재 열려있는 모든 클라이언트(페이지)의 제어권을 즉시 가져옵니다.
   return self.clients.claim();
 });
+
+// [추가] 앱으로부터 캐시 삭제 메시지를 수신하는 리스너
+self.addEventListener('message', (event) => {
+  // 'CLEAR_CACHE' 타입의 메시지를 받았을 때만 동작
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    const urlToClear = event.data.url;
+    if (!urlToClear) return;
+
+    // URL을 절대 경로로 변환 (예: '/api/teams' -> 'https://.../api/teams')
+    const fullUrl = new URL(urlToClear, self.location.origin).href;
+
+    event.waitUntil(
+      caches.open(CACHE_NAME).then((cache) => {
+        console.log(`[Service Worker] 캐시 삭제 시도: ${fullUrl}`);
+        // 지정된 URL에 해당하는 캐시를 삭제합니다.
+        return cache.delete(fullUrl);
+      })
+    );
+  }
+});
