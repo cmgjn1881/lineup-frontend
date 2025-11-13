@@ -26,7 +26,9 @@ const FormationPage = ({ teamId }) => {
 
   // 🔑 [핵심] useFormationDrag 훅 호출 및 반환 값 구조 분해 할당
   const {
-    currentFormation,
+    formationsByQuarter,
+    activeQuarter,
+    setActiveQuarter,
     loadFormation,
     draggingId,
     setPitchRef,
@@ -36,6 +38,7 @@ const FormationPage = ({ teamId }) => {
     handleAssignPlayer,
     resetFormation, // 초기화 함수
     isDirty, // ⚽️ [추가] 포메이션 변경 여부 상태
+    resetIsDirty, // ⭐️ [수정] isDirty 상태를 초기화하는 함수를 가져옵니다.
   } = useFormationDrag();
 
   // 🔑 API 관련 상태 및 로직 (훅과 독립적)
@@ -167,17 +170,25 @@ const FormationPage = ({ teamId }) => {
   };
 
   const handleSave = async () => {
-    // 🔑 [핵심] 현재 포메이션 배열의 길이가 11인지 확인
-    if (currentFormation.length !== 11) {
-      toast.error('저장할 수 없습니다: 포메이션에는 11명의 선수가 모두 필요합니다.');
-      console.warn('저장 실패: 선수 수 불일치');
-      return;
+    // ⭐️ [수정] 모든 쿼터를 순회하며 검사
+    let hasContent = false;
+    for (const quarterNum in formationsByQuarter) {
+      const formation = formationsByQuarter[quarterNum];
+
+      // 💡 [개선] 선수가 한 명이라도 배정된 쿼터인지 확인합니다.
+      const isQuarterStarted = formation.some((player) => player.dbPlayerId !== null);
+      if (isQuarterStarted) {
+        hasContent = true;
+        // 💡 [개선] 시작된 쿼터는 11명이 모두 배정되었는지 확인합니다.
+        const isComplete = formation.every((player) => player.dbPlayerId !== null);
+        if (!isComplete) {
+          toast.error(`저장할 수 없습니다: ${quarterNum}쿼터의 모든 포지션에 선수를 할당해 주세요.`);
+          return;
+        }
+      }
     }
-
-    const isComplete = currentFormation.every((player) => player.dbPlayerId !== null);
-
-    if (!isComplete) {
-      toast.error('저장할 수 없습니다: 모든 포지션에 선수를 할당해 주세요.');
+    if (!hasContent) {
+      toast.error('저장할 내용이 없습니다. 최소 한 명 이상의 선수를 배치해 주세요.');
       return;
     }
 
@@ -210,12 +221,21 @@ const FormationPage = ({ teamId }) => {
     setIsSaveModalOpen(false);
 
     // 1. 저장할 데이터 준비
-    const placementsData = currentFormation.map((player) => ({
-      playerId: player.dbPlayerId,
-      quarter: 1, // 기본값 설정 (필요 시 수정)
-      coordX: Math.round(player.x * 10),
-      coordY: Math.round(player.y * 10),
-    }));
+    const placementsData = [];
+    for (const quarterNum in formationsByQuarter) {
+      const formationForQuarter = formationsByQuarter[quarterNum];
+      // 💡 [개선] 선수가 한 명이라도 배정된 쿼터의 정보만 저장합니다.
+      if (formationForQuarter.some((player) => player.dbPlayerId !== null)) {
+        formationForQuarter.forEach((player) => {
+          placementsData.push({
+            playerId: player.dbPlayerId,
+            quarter: parseInt(quarterNum),
+            coordX: Math.round(player.x * 10),
+            coordY: Math.round(player.y * 10),
+          });
+        });
+      }
+    }
 
     const formationSaveData = {
       teamId: teamId,
@@ -243,6 +263,7 @@ const FormationPage = ({ teamId }) => {
       // ⭐️ 성공 시 현재 포메이션 이름 업데이트
       setCurrentFormationName(nameToDisplay);
       setNewFormationName(''); // 이름 입력 필드 초기화
+      resetIsDirty(); // ⭐️ [수정] 저장 성공 후, 변경 상태를 초기화합니다.
       // isDirty 상태를 false로 초기화하는 로직 추가 필요
     } catch (error) {
       console.error('포메이션 저장 중 API 오류:', error.response?.data?.message || error.message);
@@ -306,19 +327,8 @@ const FormationPage = ({ teamId }) => {
       const response = await api.getFormationDetail(formationId);
       const detailedFormation = response.data;
 
-      // 2. 훅이 이해할 수 있는 형식으로 데이터 변환
-      const loadedPlacements = detailedFormation.placements.map((p) => ({
-        posKey: p.playerPosition,
-        dbPlayerId: p.playerId,
-        name: p.playerName,
-        position: p.playerPosition,
-        backNumber: p.playerBackNumber || p.number,
-        x: Math.round(p.coordX / 10),
-        y: Math.round(p.coordY / 10),
-      }));
-
-      // 3. 훅의 상태 업데이트 함수 호출
-      loadFormation(loadedPlacements);
+      // ⭐️ [수정] 훅의 loadFormation에 placements 배열과 전체 선수 목록을 함께 전달합니다.
+      loadFormation(detailedFormation.placements, teamPlayers);
 
       setEditingFormationId(formationId);
       setCurrentFormationName(detailedFormation.name);
@@ -345,7 +355,7 @@ const FormationPage = ({ teamId }) => {
     setNewFormationName('');
   };
 
-  // ⭐️ [신규 구현] 할당된 선수 슬롯에서 선수 정보를 제거합니다.
+  // 할당된 선수 슬롯에서 선수 정보를 제거합니다.
   const handleRemovePlayerFromSlot = () => {
     if (!selectedPlayerSlot) return;
     // 1. 선수가 없는 '빈 슬롯' 데이터 객체 생성
@@ -374,13 +384,11 @@ const FormationPage = ({ teamId }) => {
     // 1. 상세 모달 닫기
     setIsPlayerDetailModalOpen(false);
 
-    // 2. 기존 activeSlot 로직을 사용하여 선수 목록 모달을 띄웁니다.
-    // handleSlotClick(selectedPlayerSlot.id, selectedPlayerSlot.posKey)를 호출하면
-    // activeSlot이 설정되고 PlayerListModal이 열립니다.
+    // 2. 선수 목록 모달 열기
     handleSlotClick(selectedPlayerSlot.id, selectedPlayerSlot.posKey);
   };
 
-  // ⭐️ [추가] 정렬을 위한 포지션 순서 정의 (FW: 1, GK: 4)
+  // 정렬을 위한 포지션 순서 정의 (FW: 1, GK: 4)
   const positionSortOrder = {
     FW: 1,
     MF: 2,
@@ -389,8 +397,8 @@ const FormationPage = ({ teamId }) => {
     // 이외의 포지션은 가장 뒤로
   };
 
-  // ⭐️ [핵심 추가] 현재 포메이션에 배정된 선수 ID 목록 생성
-  const assignedPlayerIds = currentFormation
+  // ⭐️ [핵심 수정] 현재 "활성화된 쿼터"에 배정된 선수 ID 목록 생성
+  const assignedPlayerIds = (formationsByQuarter[activeQuarter] || [])
     .map((player) => player.dbPlayerId) // dbPlayerId 목록 추출
     .filter((id) => id !== null); // null이 아닌 유효한 ID만 필터링
 
@@ -413,7 +421,7 @@ const FormationPage = ({ teamId }) => {
 
   return (
     <div className="p-0">
-      {/* 🔑 [수정] H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
+      {/* H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
       <div className="px-4 py-1 flex justify-between items-center">
         {/* 1. 팀 이름 (왼쪽 정렬) */}
         <h2 className="text-xl font-bold flex items-center text-white shrink">
@@ -456,11 +464,28 @@ const FormationPage = ({ teamId }) => {
         </div>
       </div>
 
+      {/* ⭐️ [추가] 쿼터 선택 UI */}
+      <div className="px-4 py-2 flex justify-center space-x-2">
+        {[1, 2, 3, 4].map((q) => (
+          <button
+            key={q}
+            onClick={() => setActiveQuarter(q)}
+            className={`px-4 py-1 rounded-lg text-sm font-semibold transition-colors ${
+              activeQuarter === q
+                ? 'bg-[#63FF70] text-black'
+                : 'bg-[#0D1117] text-white border border-[#6B6B6B] hover:bg-gray-700'
+            }`}
+          >
+            {q}Q
+          </button>
+        ))}
+      </div>
+
       {/* 🔑 [배치] 축구장 컴포넌트를 배치합니다. */}
       <div className="mx-auto">
         <FootballPitch ref={setPitchRef}>
-          {/* 🔑 11명 선수 아이콘 렌더링 (currentFormation 상태 사용) */}
-          {currentFormation.map((player) => {
+          {/* 🔑 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
+          {formationsByQuarter[activeQuarter]?.map((player) => {
             return (
               <div
                 key={player.id}

@@ -21,7 +21,11 @@ const calculateInitialFormation = () => {
 export const useFormationDrag = () => {
   // 1. 상태 및 Ref 정의
   const [initialFormation] = useState(calculateInitialFormation); // ⚽️ [추가] 초기 상태 저장
-  const [currentFormation, setCurrentFormation] = useState(initialFormation);
+  //const [currentFormation, setCurrentFormation] = useState(initialFormation);
+  const [formationsByQuarter, setFormationsByQuarter] = useState({
+    1: calculateInitialFormation(), // calculateInitialFormation은 기존 함수 재사용
+  });
+  const [activeQuarter, setActiveQuarter] = useState(1); // 기본값은 1
   const [draggingId, setDraggingId] = useState(null);
   const [activeSlot, setActiveSlot] = useState(null);
   const [pitchRef, setPitchRef] = useState(null);
@@ -30,54 +34,78 @@ export const useFormationDrag = () => {
   const draggingIdRef = useRef(null);
   const isDraggingRef = useRef(false); // ⚽️ [추가] 실제 드래그 발생 여부 추적
   const startPositionRef = useRef(null);
-  const formationRef = useRef(currentFormation); // 최신 포메이션 상태 참조
+  const formationRef = useRef(formationsByQuarter, activeQuarter); // 최신 포메이션 상태 참조
 
   const resetIsDirty = useCallback(() => {
     setIsDirty(false);
   }, []);
 
+  // ⭐️ [개선 제안] 쿼터 변경 및 자동 생성 로직
+  const handleQuarterChange = useCallback(
+    (quarter) => {
+      setFormationsByQuarter((prev) => {
+        // 만약 클릭한 쿼터에 아직 포메이션 데이터가 없다면,
+        // 초기 포메이션을 생성하여 추가합니다.
+        if (!prev[quarter]) {
+          return { ...prev, [quarter]: calculateInitialFormation() };
+        }
+        return prev; // 이미 데이터가 있으면 상태를 변경하지 않습니다.
+      });
+      setActiveQuarter(quarter); // 활성 쿼터를 변경합니다.
+    },
+    [calculateInitialFormation] // calculateInitialFormation은 재생성되지 않으므로 의존성에 추가해도 안전합니다.
+  );
   // ⚽️ [추가] currentFormation이 변경될 때마다 초기 상태와 비교하여 isDirty 상태를 업데이트합니다.
   useEffect(() => {
-    // JSON.stringify를 사용한 간단한 깊은 비교
-    const dirty = JSON.stringify(currentFormation) !== JSON.stringify(initialFormation);
-    setIsDirty(dirty);
-  }, [currentFormation, initialFormation]);
+    const isDirty = JSON.stringify(formationsByQuarter) !== JSON.stringify({ 1: initialFormation });
+    setIsDirty(isDirty);
+  }, [formationsByQuarter, initialFormation]);
 
-  // 💡 포메이션이 변경될 때마다 ref를 업데이트합니다.
   useEffect(() => {
-    formationRef.current = currentFormation;
-  }, [currentFormation]);
+    formationRef.current = formationsByQuarter[activeQuarter] || [];
+  }, [formationsByQuarter, activeQuarter]);
 
   // ⭐️ [핵심 추가] 외부에서 포메이션 데이터를 받아 상태를 업데이트하는 함수
-  const loadFormation = useCallback((loadedPlacements) => {
-    // 🚨 훅 내부 UI ID(1~11)를 생성하여 부여합니다.
-    const newFormation = loadedPlacements.map((placement, index) => {
-      // 백엔드 데이터에 슬롯의 고유 키가 없으므로, UI 전용의 고유 ID(1~11)를 새로 부여합니다.
-      const uiId = index + 1;
+  const loadFormation = useCallback((loadedPlacements, allPlayers) => {
+    // 1. 쿼터별로 그룹화할 객체 초기화
+    const newFormationsByQuarter = {};
 
-      const positionKey = findZoneKeyByCoordinates(placement.x, placement.y);
+    // 2. 서버에서 받은 placements 배열을 순회
+    loadedPlacements.forEach((p) => {
+      const quarter = p.quarter; // 백엔드 데이터의 quarter 필드 사용
+      const playerInfo = allPlayers.find((player) => player.id === p.playerId);
 
-      return {
-        ...placement, // dbPlayerId, name, backNumber 등 기존 DB 데이터 복사
-        id: uiId,
+      // 3. 해당 쿼터의 배열이 없으면 새로 생성
+      if (!newFormationsByQuarter[quarter]) {
+        newFormationsByQuarter[quarter] = [];
+      }
 
-        // 🚨 포지션 필드 업데이트
-        position: positionKey, // ⭐️ 좌표 기반의 상세 포지션으로 설정
-        posKey: positionKey, // ⭐️ posKey도 상세 포지션으로 통일
-
-        x: placement.x,
-        y: placement.y,
-      };
+      // 💡 [수정] 서버 데이터(p)와 선수 정보(playerInfo)를 조합하여 상태 객체를 만듭니다.
+      const positionKey = findZoneKeyByCoordinates(p.coordX, p.coordY); // coordX, coordY 사용
+      newFormationsByQuarter[quarter].push({
+        id: newFormationsByQuarter[quarter].length + 1,
+        dbPlayerId: p.playerId,
+        name: p.playerName || playerInfo?.name || 'Unknown',
+        backNumber: p.playerBackNumber || playerInfo?.backNumber,
+        position: p.playerPosition || playerInfo?.position || positionKey,
+        posKey: positionKey,
+        x: p.coordX / 10, // ⭐️ [수정] 저장 시 곱했던 10을 다시 나눕니다.
+        y: p.coordY / 10, // ⭐️ [수정] 저장 시 곱했던 10을 다시 나눕니다.
+      });
     });
 
-    // 2. 상태 업데이트 및 isDirty 상태 초기화
-    setCurrentFormation(newFormation);
-    setIsDirty(false); // 로드했으므로 변경되지 않은 상태로 설정
+    // 5. 그룹화된 객체로 상태 업데이트
+    setFormationsByQuarter(newFormationsByQuarter);
 
-    formationRef.current = newFormation; // ref도 동기화
+    // 💡 [추가] 불러오기가 완료되면 isDirty 상태를 false로 초기화합니다.
+    resetIsDirty();
 
-    console.log('✅ 포메이션 로드 완료 (단순 덮어쓰기):', newFormation);
-  }, []); // 의존성 배열은 비워둡니다 (calculateInitialFormation이 불변이므로)
+    // 6. 불러온 후 첫 번째 쿼터를 활성화
+    const firstQuarter = Object.keys(newFormationsByQuarter)[0] || 1;
+    setActiveQuarter(parseInt(firstQuarter));
+
+    console.log('✅ 포메이션 로드 완료 (쿼터별 그룹화):', newFormationsByQuarter);
+  }, []); // 의존성 배열은 비워둡니다
 
   // 2. 💡 [추가] 슬롯 클릭 및 배정 핸들러
   const handleSlotClick = useCallback((id, posKey) => {
@@ -95,37 +123,44 @@ export const useFormationDrag = () => {
     setActiveSlot((prev) => (prev?.id === id ? null : { id, posKey }));
   }, []);
 
-  const handleAssignPlayer = useCallback((slotId, player) => {
-    setCurrentFormation((prevFormation) =>
-      prevFormation.map((p) =>
-        p.id === slotId
-          ? {
-              ...p,
-              dbPlayerId: player.id || null,
-              name: player.name || 'PLAYER',
-              backNumber: player.backNumber || player.number || '+',
-              //position: player.position, // 포지션은 변경하지 않음
-              posKey: p.posKey,
-            }
-          : p
-      )
-    );
-    setActiveSlot(null); // 배정 후 모달 닫기
-  }, []);
+  const handleAssignPlayer = useCallback(
+    (slotId, player) => {
+      setFormationsByQuarter((prevFormation) => ({
+        ...prevFormation,
+        [activeQuarter]: prevFormation[activeQuarter].map((p) =>
+          p.id === slotId
+            ? {
+                ...p,
+                dbPlayerId: player.id || null,
+                name: player.name || 'PLAYER',
+                backNumber: player.backNumber || player.number || '+',
+                //position: player.position, // 포지션은 변경하지 않음
+                posKey: p.posKey,
+              }
+            : p
+        ),
+      }));
+      setActiveSlot(null); // 배정 후 모달 닫기
+    },
+    [activeQuarter]
+  );
 
   // 3. 💡 [추가] 선수 위치 교환 로직 (handlePlayerSwap)
   const handlePlayerSwap = useCallback(
     (draggedPlayerId, targetPlayerId, targetPosKey, originalPosKey, draggedPlayerInitialPos) => {
-      setCurrentFormation((prevFormation) => {
-        const draggedPlayer = prevFormation.find((p) => p.id === draggedPlayerId);
-        const targetPlayer = prevFormation.find((p) => p.id === targetPlayerId);
+      setFormationsByQuarter((prev) => {
+        const formationToUpdate = prev[activeQuarter];
+        if (!formationToUpdate) return prev; // 안전장치
+
+        const draggedPlayer = formationToUpdate.find((p) => p.id === draggedPlayerId);
+        const targetPlayer = formationToUpdate.find((p) => p.id === targetPlayerId);
 
         // 🚨 [핵심 안전성 체크] 유효성 검사
         if (!draggedPlayer || !targetPlayer || !targetPosKey || !originalPosKey || typeof targetPlayer.x !== 'number') {
-          return prevFormation;
+          return prev;
         }
 
-        const newFormation = prevFormation.map((player) => {
+        const newFormation = formationToUpdate.map((player) => {
           if (player.id === draggedPlayerId) {
             return {
               ...player,
@@ -151,10 +186,10 @@ export const useFormationDrag = () => {
           return player;
         });
         console.log(`Swapped Player ID ${draggedPlayerId} with Player ID ${targetPlayerId}`);
-        return newFormation;
+        return { ...prev, [activeQuarter]: newFormation };
       });
     },
-    [] // SLOT_ZONES_BOUNDS 등 상수는 외부에서 가져왔고 불변이라고 가정
+    [activeQuarter]
   );
 
   // 4. 💡 [핵심] 마우스 이동 감지 핸들러 (handleMouseMove)
@@ -211,11 +246,16 @@ export const useFormationDrag = () => {
       const newX = Math.max(iconHalfWidthPercent, Math.min(100 - iconHalfWidthPercent, rawX));
       const newY = Math.max(iconTopMarginPercent, Math.min(dropMaxY, rawY));
 
-      setCurrentFormation((prevFormation) =>
-        prevFormation.map((player) => (player.id === currentDraggingId ? { ...player, x: newX, y: newY } : player))
-      );
+      setFormationsByQuarter((prev) => {
+        const formationToUpdate = prev[activeQuarter];
+        if (!formationToUpdate) return prev; // 안전장치
+        const newFormation = formationToUpdate.map((player) =>
+          player.id === currentDraggingId ? { ...player, x: newX, y: newY } : player
+        );
+        return { ...prev, [activeQuarter]: newFormation };
+      });
     },
-    [draggingIdRef, pitchRef, formationRef]
+    [draggingIdRef, pitchRef, formationRef, activeQuarter]
   );
 
   // 5. 💡 [핵심] 드래그 종료/드롭 처리 핸들러 (handleMouseUp)
@@ -300,32 +340,35 @@ export const useFormationDrag = () => {
           handlePlayerSwap(finalDraggingId, occupyingPlayer.id, targetPosKey, originalPosKey, initialPosition);
         } else if (!occupyingPlayer) {
           // 2-2. 빈 구역 이동
-          setCurrentFormation((prevFormation) =>
-            prevFormation.map((player) =>
+          setFormationsByQuarter((prev) => ({
+            ...prev,
+            [activeQuarter]: prev[activeQuarter].map((player) =>
               player.id === finalDraggingId
                 ? { ...player, x: dropX, y: dropY, position: targetPosKey, posKey: targetPosKey }
                 : player
-            )
-          );
+            ),
+          }));
           console.log(`Player ID ${finalDraggingId} moved to empty zone ${targetPosKey}`);
         } else {
           // 2-3. GK 구역 등 이동 불가 -> 원래 위치 복귀
-          setCurrentFormation((prevFormation) =>
-            prevFormation.map((player) =>
+          setFormationsByQuarter((prev) => ({
+            ...prev,
+            [activeQuarter]: prev[activeQuarter].map((player) =>
               player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
-            )
-          );
+            ),
+          }));
         }
       } else {
         // Case 3: 구역 밖 드롭 -> 원래 위치 복귀
-        setCurrentFormation((prevFormation) =>
-          prevFormation.map((player) =>
+        setFormationsByQuarter((prev) => ({
+          ...prev,
+          [activeQuarter]: prev[activeQuarter].map((player) =>
             player.id === finalDraggingId ? { ...player, x: initialPosition.x, y: initialPosition.y } : player
-          )
-        );
+          ),
+        }));
       }
     },
-    [handleMouseMove, pitchRef, handlePlayerSwap, SLOT_ZONES_BOUNDS] // 🔑 의존성 유지
+    [handleMouseMove, pitchRef, handlePlayerSwap, activeQuarter] // 🔑 의존성 유지
   );
 
   // 6. 💡 [핵심] 드래그 시작 핸들러 (handleMouseDown)
@@ -374,12 +417,15 @@ export const useFormationDrag = () => {
 
   // 8. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
   const resetFormation = useCallback(() => {
-    setCurrentFormation(initialFormation); // ⚽️ [수정] 저장된 초기 상태로 리셋
-    setIsDirty(false); // 리셋했으므로 변경되지 않은 상태로 설정
+    setFormationsByQuarter({ 1: initialFormation }); // 1쿼터만 있는 초기 객체로 리셋
+    setActiveQuarter(1); // 활성 쿼터도 1로 리셋
+    // isDirty는 useEffect에 의해 자동으로 false로 변경됩니다.
   }, [initialFormation]);
 
   return {
-    currentFormation,
+    formationsByQuarter,
+    activeQuarter,
+    setActiveQuarter: handleQuarterChange, // ⭐️ [개선 제안] 기존 setActiveQuarter 대신 새로운 함수를 반환합니다.
     draggingId,
     pitchRef,
     activeSlot,
@@ -391,6 +437,6 @@ export const useFormationDrag = () => {
     handleAssignPlayer,
     isDirty, // ⚽️ [추가] isDirty 상태를 외부로 노출
     loadFormation, // ⭐️ [핵심 추가] 포메이션 불러오기 함수 노출
-    resetIsDirty, // ⚽️ [추가] isDirty 상태 리셋 함수 노출
+    resetIsDirty,
   };
 };

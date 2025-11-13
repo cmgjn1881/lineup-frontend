@@ -18,21 +18,26 @@ const KakaoCallback = () => {
   const getKakaoToken = useCallback(async (code) => {
     const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
     const KAKAO_REDIRECT_URI = `${window.location.origin}/kakao-redirect.html`;
+    // 💡 [개선] 환경 변수에서 client_secret을 가져옵니다.
+    const KAKAO_CLIENT_SECRET = import.meta.env.VITE_KAKAO_CLIENT_SECRET;
 
-    const response = await axios.post(
-      'https://kauth.kakao.com/oauth/token',
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: KAKAO_CLIENT_ID,
-        redirect_uri: KAKAO_REDIRECT_URI,
-        code: code,
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-        },
-      }
-    );
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: KAKAO_CLIENT_ID,
+      redirect_uri: KAKAO_REDIRECT_URI,
+      code: code,
+    });
+
+    // 💡 [개선] client_secret 값이 존재할 경우에만 파라미터에 추가합니다.
+    if (KAKAO_CLIENT_SECRET) {
+      params.append('client_secret', KAKAO_CLIENT_SECRET);
+    }
+
+    const response = await axios.post('https://kauth.kakao.com/oauth/token', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+    });
 
     const kakaoAccessToken = response.data.access_token;
     if (!kakaoAccessToken) {
