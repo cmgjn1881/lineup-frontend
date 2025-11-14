@@ -119,7 +119,14 @@ export class ApiClient {
 
   // 팀 관리 API
   createTeam = (name) => this.client.post('/teams', { name });
-  getTeams = () => this.client.get('/teams');
+  getTeams = (sort = 'latest') => {
+    const sortBy = sort === 'latest' ? 'createdAt' : 'name';
+    return this.client.get('/teams', {
+      params: {
+        sort: sortBy,
+      },
+    });
+  };
   // 💡 [추가] 계정 탈퇴 API
   // 💡 [수정] password가 falsy(null, '') 값일 경우 data 객체에서 제외합니다.
   // 이렇게 하면 소셜 로그인 사용자의 탈퇴 요청 시 불필요한 password 필드가 전송되지 않습니다.

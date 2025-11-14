@@ -16,13 +16,14 @@ const TeamPage = () => {
   const [teams, setTeams] = useState([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [error, setError] = useState('');
+  const [sortOrder, setSortOrder] = useState('latest');
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState(null); // { id, name }
+  const [teamToDelete, setTeamToDelete] = useState(null);
 
   const fetchTeams = useCallback(async () => {
     try {
-      const res = await api.getTeams();
+      const res = await api.getTeams(sortOrder);
       setTeams(res.data);
       setError('');
     } catch {
@@ -31,7 +32,7 @@ const TeamPage = () => {
       // 💡 toast.error로 변경
       toast.error(errorMessage);
     }
-  }, [api]);
+  }, [api, sortOrder]);
 
   useEffect(() => {
     if (auth.isAuthenticated) {
@@ -67,7 +68,7 @@ const TeamPage = () => {
     const { id, name } = teamToDelete;
 
     setError('');
-    setIsConfirmOpen(false); // 다이얼로그 닫기
+    setIsConfirmOpen(false);
 
     try {
       await api.deleteTeam(id);
@@ -77,16 +78,14 @@ const TeamPage = () => {
     } catch (err) {
       const errorMessage = err.response?.data?.message || '팀 삭제에 실패했습니다. (권한 없음 확인)';
       setError(errorMessage);
-      // 💡 toast.error 추가
       toast.error(errorMessage);
     }
   };
 
   return (
-    // 💡 [수정] main 태그가 스크롤을 담당하므로, 여기서는 overflow-y-auto를 제거합니다.
     <div className="p-4">
       <h1 className="font-bold text-white">팀 추가하기</h1>
-      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-6 pt-4 pb-4 border rounded-lg shadow-sm">
+      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-3 pt-4 pb-4 border rounded-lg shadow-sm">
         <TextInput
           type="text"
           placeholder="새 팀 이름 (예: FC 서울 개발팀)"
@@ -98,6 +97,19 @@ const TeamPage = () => {
       </form>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {/* 정렬 드롭다운 */}
+      <div className="flex justify-end mb-4">
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="bg-[#0D1117] text-white border border-[#6B6B6B] rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#63FF70]"
+          aria-label="팀 목록 정렬"
+        >
+          <option value="latest">최신순</option>
+          <option value="name">이름순</option>
+        </select>
+      </div>
 
       {/* 팀 목록 */}
       <div className="space-y-4">
