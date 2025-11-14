@@ -10,7 +10,7 @@ const calculateInitialFormation = () => {
     const [y, x] = POSITIONS[player.posKey];
     return {
       ...player,
-      id: index + 1, // 고유 ID 부여
+      id: index + 1,
       dbPlayerId: null, // DB 선수가 할당되면 여기에 실제 ID를 저장
       x: x, // 초기 X 좌표 (%)
       y: y, // 초기 Y 좌표 (%)
@@ -20,42 +20,37 @@ const calculateInitialFormation = () => {
 
 export const useFormationDrag = () => {
   // 1. 상태 및 Ref 정의
-  const [initialFormation] = useState(calculateInitialFormation); // ⚽️ [추가] 초기 상태 저장
-  //const [currentFormation, setCurrentFormation] = useState(initialFormation);
+  const [initialFormation] = useState(calculateInitialFormation);
   const [formationsByQuarter, setFormationsByQuarter] = useState({
-    1: calculateInitialFormation(), // calculateInitialFormation은 기존 함수 재사용
+    1: calculateInitialFormation(),
   });
-  const [activeQuarter, setActiveQuarter] = useState(1); // 기본값은 1
+  const [activeQuarter, setActiveQuarter] = useState(1);
   const [draggingId, setDraggingId] = useState(null);
   const [activeSlot, setActiveSlot] = useState(null);
   const [pitchRef, setPitchRef] = useState(null);
-  const [isDirty, setIsDirty] = useState(false); // ⚽️ [추가] 변경 여부 상태
+  const [isDirty, setIsDirty] = useState(false);
 
   const draggingIdRef = useRef(null);
-  const isDraggingRef = useRef(false); // ⚽️ [추가] 실제 드래그 발생 여부 추적
+  const isDraggingRef = useRef(false);
   const startPositionRef = useRef(null);
-  const formationRef = useRef(formationsByQuarter, activeQuarter); // 최신 포메이션 상태 참조
+  const formationRef = useRef(formationsByQuarter, activeQuarter);
 
   const resetIsDirty = useCallback(() => {
     setIsDirty(false);
   }, []);
 
   // ⭐️ [개선 제안] 쿼터 변경 및 자동 생성 로직
-  const handleQuarterChange = useCallback(
-    (quarter) => {
-      setFormationsByQuarter((prev) => {
-        // 만약 클릭한 쿼터에 아직 포메이션 데이터가 없다면,
-        // 초기 포메이션을 생성하여 추가합니다.
-        if (!prev[quarter]) {
-          return { ...prev, [quarter]: calculateInitialFormation() };
-        }
-        return prev; // 이미 데이터가 있으면 상태를 변경하지 않습니다.
-      });
-      setActiveQuarter(quarter); // 활성 쿼터를 변경합니다.
-    },
-    [calculateInitialFormation] // calculateInitialFormation은 재생성되지 않으므로 의존성에 추가해도 안전합니다.
-  );
-  // ⚽️ [추가] currentFormation이 변경될 때마다 초기 상태와 비교하여 isDirty 상태를 업데이트합니다.
+  const handleQuarterChange = useCallback((quarter) => {
+    setFormationsByQuarter((prev) => {
+      // 만약 클릭한 쿼터에 아직 포메이션 데이터가 없다면,
+      // 초기 포메이션을 생성하여 추가합니다.
+      if (!prev[quarter]) {
+        return { ...prev, [quarter]: calculateInitialFormation() };
+      }
+      return prev; // 이미 데이터가 있으면 상태를 변경하지 않습니다.
+    });
+    setActiveQuarter(quarter); // 활성 쿼터를 변경합니다.
+  }, []);
   useEffect(() => {
     const isDirty = JSON.stringify(formationsByQuarter) !== JSON.stringify({ 1: initialFormation });
     setIsDirty(isDirty);
@@ -65,56 +60,61 @@ export const useFormationDrag = () => {
     formationRef.current = formationsByQuarter[activeQuarter] || [];
   }, [formationsByQuarter, activeQuarter]);
 
-  // ⭐️ [핵심 추가] 외부에서 포메이션 데이터를 받아 상태를 업데이트하는 함수
-  const loadFormation = useCallback((loadedPlacements, allPlayers) => {
-    // 1. 쿼터별로 그룹화할 객체 초기화
-    const newFormationsByQuarter = {};
+  // [핵심 추가] 외부에서 포메이션 데이터를 받아 상태를 업데이트하는 함수
+  const loadFormation = useCallback(
+    (loadedPlacements, allPlayers) => {
+      // 1. 쿼터별로 그룹화할 객체 초기화
+      const newFormationsByQuarter = {};
 
-    // 2. 서버에서 받은 placements 배열을 순회
-    loadedPlacements.forEach((p) => {
-      const quarter = p.quarter; // 백엔드 데이터의 quarter 필드 사용
-      const playerInfo = allPlayers.find((player) => player.id === p.playerId);
+      // 2. 서버에서 받은 placements 배열을 순회
+      loadedPlacements.forEach((p) => {
+        const quarter = p.quarter; // 백엔드 데이터의 quarter 필드 사용
+        const playerInfo = allPlayers.find((player) => player.id === p.playerId);
 
-      // 3. 해당 쿼터의 배열이 없으면 새로 생성
-      if (!newFormationsByQuarter[quarter]) {
-        newFormationsByQuarter[quarter] = [];
-      }
+        // 3. 해당 쿼터의 배열이 없으면 새로 생성
+        if (!newFormationsByQuarter[quarter]) {
+          newFormationsByQuarter[quarter] = [];
+        }
 
-      // 💡 [수정] 서버 데이터(p)와 선수 정보(playerInfo)를 조합하여 상태 객체를 만듭니다.
-      const positionKey = findZoneKeyByCoordinates(p.coordX, p.coordY); // coordX, coordY 사용
-      newFormationsByQuarter[quarter].push({
-        id: newFormationsByQuarter[quarter].length + 1,
-        dbPlayerId: p.playerId,
-        name: p.playerName || playerInfo?.name || 'Unknown',
-        backNumber: p.playerBackNumber || playerInfo?.backNumber,
-        position: p.playerPosition || playerInfo?.position || positionKey,
-        posKey: positionKey,
-        x: p.coordX / 10, // ⭐️ [수정] 저장 시 곱했던 10을 다시 나눕니다.
-        y: p.coordY / 10, // ⭐️ [수정] 저장 시 곱했던 10을 다시 나눕니다.
+        // [수정] 서버 좌표(0-1000)를 경기장 좌표(0-100)로 먼저 변환합니다.
+        const newX = p.coordX / 10;
+        const newY = p.coordY / 10;
+
+        // [수정] 서버 데이터(p)와 선수 정보(playerInfo)를 조합하여 상태 객체를 만듭니다.
+        const positionKey = findZoneKeyByCoordinates(newX, newY); // 변환된 좌표로 포지션을 찾습니다.
+        newFormationsByQuarter[quarter].push({
+          id: newFormationsByQuarter[quarter].length + 1,
+          dbPlayerId: p.playerId,
+          name: p.playerName || playerInfo?.name || 'Unknown',
+          backNumber: p.playerBackNumber || playerInfo?.backNumber,
+          position: positionKey,
+          posKey: positionKey,
+          x: newX,
+          y: newY,
+        });
       });
-    });
 
-    // 5. 그룹화된 객체로 상태 업데이트
-    setFormationsByQuarter(newFormationsByQuarter);
+      // 5. 그룹화된 객체로 상태 업데이트
+      setFormationsByQuarter(newFormationsByQuarter);
 
-    // 💡 [추가] 불러오기가 완료되면 isDirty 상태를 false로 초기화합니다.
-    resetIsDirty();
+      // [추가] 불러오기가 완료되면 isDirty 상태를 false로 초기화합니다.
+      resetIsDirty();
 
-    // 6. 불러온 후 첫 번째 쿼터를 활성화
-    const firstQuarter = Object.keys(newFormationsByQuarter)[0] || 1;
-    setActiveQuarter(parseInt(firstQuarter));
+      // 6. 불러온 후 첫 번째 쿼터를 활성화
+      const firstQuarter = Object.keys(newFormationsByQuarter)[0] || 1;
+      setActiveQuarter(parseInt(firstQuarter));
 
-    console.log('✅ 포메이션 로드 완료 (쿼터별 그룹화):', newFormationsByQuarter);
-  }, []); // 의존성 배열은 비워둡니다
+      console.log('✅ 포메이션 로드 완료 (쿼터별 그룹화):', newFormationsByQuarter);
+    },
+    [resetIsDirty]
+  );
 
   // 2. 💡 [추가] 슬롯 클릭 및 배정 핸들러
   const handleSlotClick = useCallback((id, posKey) => {
-    // ⚽️ [핵심 수정] 드래그 동작이 발생했다면 모달을 띄우지 않고 즉시 종료합니다.
     if (isDraggingRef.current) {
       return;
     }
 
-    // ⚽️ [핵심 수정] id가 null이면 모달을 닫기 위한 호출이므로, 항상 activeSlot을 null로 설정합니다.
     if (id === null) {
       setActiveSlot(null);
       return;
@@ -145,7 +145,7 @@ export const useFormationDrag = () => {
     [activeQuarter]
   );
 
-  // 3. 💡 [추가] 선수 위치 교환 로직 (handlePlayerSwap)
+  // [추가] 선수 위치 교환 로직 (handlePlayerSwap)
   const handlePlayerSwap = useCallback(
     (draggedPlayerId, targetPlayerId, targetPosKey, originalPosKey, draggedPlayerInitialPos) => {
       setFormationsByQuarter((prev) => {
@@ -155,7 +155,7 @@ export const useFormationDrag = () => {
         const draggedPlayer = formationToUpdate.find((p) => p.id === draggedPlayerId);
         const targetPlayer = formationToUpdate.find((p) => p.id === targetPlayerId);
 
-        // 🚨 [핵심 안전성 체크] 유효성 검사
+        // [핵심 안전성 체크] 유효성 검사
         if (!draggedPlayer || !targetPlayer || !targetPosKey || !originalPosKey || typeof targetPlayer.x !== 'number') {
           return prev;
         }
@@ -192,13 +192,13 @@ export const useFormationDrag = () => {
     [activeQuarter]
   );
 
-  // 4. 💡 [핵심] 마우스 이동 감지 핸들러 (handleMouseMove)
+  // [핵심] 마우스 이동 감지 핸들러 (handleMouseMove)
   const handleMouseMove = useCallback(
     (e) => {
       const currentDraggingId = draggingIdRef.current;
       if (!currentDraggingId || !pitchRef) return;
 
-      // ⚽️ [핵심 수정] 드래그 중 스크롤 방지 로직 강화
+      // [핵심 수정] 드래그 중 스크롤 방지 로직 강화
       // 이벤트가 취소 가능할 때만 preventDefault를 호출하여 오류를 방지하고, 스크롤을 확실하게 막습니다.
       if (e.cancelable) {
         e.preventDefault();
@@ -211,7 +211,7 @@ export const useFormationDrag = () => {
       const clientX = isTouch ? e.touches[0].clientX : e.clientX;
       const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
-      // ⚽️ [추가] 드래그 임계값(threshold) 로직
+      // [추가] 드래그 임계값(threshold) 로직
       // 사용자가 선수를 잡고 일정 거리 이상 움직였을 때만 드래그로 간주합니다.
       if (!isDraggingRef.current) {
         const startPos = startPositionRef.current;
@@ -232,7 +232,7 @@ export const useFormationDrag = () => {
       const rawX = ((clientX - rect.left) / rect.width) * 100;
       const rawY = ((clientY - rect.top) / rect.height) * 100;
 
-      // 🚨 [경계 계산 상수]
+      // [경계 계산 상수]
       const ICON_HEIGHT_PX = 64;
       const POSITION_TEXT_OFFSET_PX = 12;
 
@@ -258,19 +258,19 @@ export const useFormationDrag = () => {
     [draggingIdRef, pitchRef, formationRef, activeQuarter]
   );
 
-  // 5. 💡 [핵심] 드래그 종료/드롭 처리 핸들러 (handleMouseUp)
+  // [핵심] 드래그 종료/드롭 처리 핸들러 (handleMouseUp)
   const handleMouseUp = useCallback(
     (event) => {
       const finalDraggingId = draggingIdRef.current;
       const initialPosition = startPositionRef.current;
-      const wasDragging = isDraggingRef.current; // ⚽️ [추가] 드래그 발생 여부 저장
+      const wasDragging = isDraggingRef.current;
 
       // 1. 드래그 종료 상태 업데이트 (클린업 시작)
       setDraggingId(null);
       draggingIdRef.current = null;
       startPositionRef.current = null;
 
-      // ⚽️ [핵심 수정] isDraggingRef.current를 즉시 false로 바꾸면, 뒤이어 발생하는 click 이벤트에서
+      // [핵심 수정] isDraggingRef.current를 즉시 false로 바꾸면, 뒤이어 발생하는 click 이벤트에서
       // 드래그 여부를 판단할 수 없습니다. setTimeout으로 초기화를 지연시켜 이 문제를 해결합니다.
       setTimeout(() => {
         isDraggingRef.current = false;
@@ -282,7 +282,7 @@ export const useFormationDrag = () => {
       window.removeEventListener('touchmove', handleMouseMove);
       window.removeEventListener('touchend', handleMouseUp);
 
-      // ⚽️ [추가] 드래그가 아닌 단순 클릭이었는지 확인하고 콘솔에 로그를 출력합니다.
+      // [추가] 드래그가 아닌 단순 클릭이었는지 확인하고 콘솔에 로그를 출력합니다.
       if (!wasDragging) {
         console.log('Player icon clicked (not dragged)');
       }
@@ -371,7 +371,7 @@ export const useFormationDrag = () => {
     [handleMouseMove, pitchRef, handlePlayerSwap, activeQuarter] // 🔑 의존성 유지
   );
 
-  // 6. 💡 [핵심] 드래그 시작 핸들러 (handleMouseDown)
+  // [핵심] 드래그 시작 핸들러 (handleMouseDown)
   const handleMouseDown = useCallback(
     (e, id) => {
       const playerToDrag = formationRef.current.find((p) => p.id === id);
@@ -382,11 +382,10 @@ export const useFormationDrag = () => {
       if (playerToDrag && playerToDrag.position === 'GK') return;
 
       console.log('Drag started for player ID:', id);
-      // ⚽️ [추가] 드래그 시작 시 dbPlayerId를 콘솔에 출력합니다.
       // 할당된 선수가 없으면 null이 출력됩니다.
       console.log('DB Player ID:', playerToDrag?.dbPlayerId);
 
-      // ⚽️ [수정] 드래그 시작 시점의 화면 좌표(clientX, clientY)도 함께 저장합니다.
+      // 드래그 시작 시점의 화면 좌표(clientX, clientY)도 함께 저장합니다.
       startPositionRef.current = {
         x: playerToDrag.x,
         y: playerToDrag.y,
@@ -406,7 +405,7 @@ export const useFormationDrag = () => {
     [handleMouseMove, handleMouseUp]
   );
 
-  // 7. 💡 [클린업] 컴포넌트 언마운트 시 전역 이벤트 리스너 정리
+  // [클린업] 컴포넌트 언마운트 시 전역 이벤트 리스너 정리
   useEffect(() => {
     const handleMove = handleMouseMove;
     return () => {
@@ -415,7 +414,7 @@ export const useFormationDrag = () => {
     };
   }, [handleMouseMove]);
 
-  // 8. 💡 [리셋 함수] 초기 포메이션 상태로 되돌립니다.
+  // [리셋 함수] 초기 포메이션 상태로 되돌립니다.
   const resetFormation = useCallback(() => {
     setFormationsByQuarter({ 1: initialFormation }); // 1쿼터만 있는 초기 객체로 리셋
     setActiveQuarter(1); // 활성 쿼터도 1로 리셋
@@ -425,7 +424,7 @@ export const useFormationDrag = () => {
   return {
     formationsByQuarter,
     activeQuarter,
-    setActiveQuarter: handleQuarterChange, // ⭐️ [개선 제안] 기존 setActiveQuarter 대신 새로운 함수를 반환합니다.
+    setActiveQuarter: handleQuarterChange,
     draggingId,
     pitchRef,
     activeSlot,
@@ -435,8 +434,8 @@ export const useFormationDrag = () => {
     resetFormation,
     handleSlotClick,
     handleAssignPlayer,
-    isDirty, // ⚽️ [추가] isDirty 상태를 외부로 노출
-    loadFormation, // ⭐️ [핵심 추가] 포메이션 불러오기 함수 노출
+    isDirty,
+    loadFormation,
     resetIsDirty,
   };
 };

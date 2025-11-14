@@ -38,11 +38,15 @@ const PlayerQuarterStatusPanel = ({ formationsByQuarter, teamPlayers, isOpen }) 
       formation.forEach((slot) => {
         if (slot.dbPlayerId && assignments[slot.dbPlayerId]) {
           assignments[slot.dbPlayerId].quarters.push(quarter);
+          // [수정] 포메이션에 배치된 선수의 최신 정보(등번호, 포지션)를 패널에 반영합니다.
+          if (slot.backNumber) {
+            assignments[slot.dbPlayerId].backNumber = slot.backNumber;
+          }
         }
       });
     }
 
-    // 💡 [개선] Object.values를 한 번만 호출하고, map과 sort를 체이닝하여 가독성을 높입니다.
+    // [개선] Object.values를 한 번만 호출하고, map과 sort를 체이닝하여 가독성을 높입니다.
     return Object.values(assignments)
       .map((player) => ({
         ...player,
@@ -62,9 +66,6 @@ const PlayerQuarterStatusPanel = ({ formationsByQuarter, teamPlayers, isOpen }) 
   }, [formationsByQuarter, teamPlayers]);
 
   return (
-    // 패널 컨테이너: 화면 오른쪽에 고정, 슬라이드 애니메이션 적용
-    // 💡 [수정] w-full을 제거하고 고정 너비(w-96)를 지정하여 화면을 덮지 않도록 합니다.
-    // 💡 [수정] 패널의 최대 너비를 sm:max-w-xs (320px)에서 sm:max-w-2xs (288px)로 줄여 더 슬림하게 만듭니다.
     <div
       className={`absolute top-0 right-0 h-full w-[60%] sm:max-w-2xs bg-[#0D1117] border-l border-[#6B6B6B] shadow-2xl z-30 transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -83,10 +84,10 @@ const PlayerQuarterStatusPanel = ({ formationsByQuarter, teamPlayers, isOpen }) 
         <div className="grow overflow-y-auto">
           {playerQuarterAssignments.map((player) => (
             <div key={player.id} className="mb-2 p-2 rounded-md hover:bg-gray-800">
-              {/* 💡 [수정] 등번호, 포지션, 이름을 함께 표시하도록 UI 개선 */}
+              {/* 등번호, 포지션, 이름을 함께 표시하도록 UI 개선 */}
               <div className="flex items-baseline space-x-2">
                 <span className="text-sm font-mono text-gray-500 w-6 text-right">
-                  {player.backNumber || player.number}.
+                  {player.backNumber || player.number || '?'}.
                 </span>
                 <span className={`font-bold text-sm w-7 ${POSITION_COLORS[player.position] || 'text-gray-400'}`}>
                   {player.position}
@@ -95,7 +96,6 @@ const PlayerQuarterStatusPanel = ({ formationsByQuarter, teamPlayers, isOpen }) 
                 <span className="text-xs font-medium text-gray-400">({player.quarters.length}쿼터)</span>
               </div>
               <p className="text-sm text-gray-400">
-                {/* 💡 [수정] "배정된 쿼터:" 텍스트를 "참여:"로 간결하게 변경합니다. */}
                 배정된 쿼터: {player.quarters.length > 0 ? player.quarters.join('Q, ') + 'Q' : '없음'}
               </p>
             </div>
