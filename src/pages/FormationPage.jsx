@@ -7,7 +7,7 @@ import PlayerIcon from '../components/PlayerIcon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import toast from 'react-hot-toast';
 import PlayerListPanel from '../components/PlayerListPanel';
-import { RotateCcw, List, CircleX, Download, Share2 } from 'lucide-react';
+import { RotateCcw, List, Download, Share2, PanelRightOpen, X } from 'lucide-react';
 import teamFormationIcon from '../assets/teamformation.svg';
 import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
@@ -17,6 +17,7 @@ import { useHeaderActions } from '../context/HeaderActionsContext.jsx';
 import FormationNameModal from '../components/FormationNameModal';
 import FormationLoadModal from '../components/FormationLoadModal';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import PlayerQuarterStatusPanel from '../components/PlayerQuarterStatusPanel';
 
 const FormationPage = ({ teamId }) => {
   const { setActions } = useHeaderActions();
@@ -24,7 +25,6 @@ const FormationPage = ({ teamId }) => {
   const navigate = useNavigate();
   const api = useApiClient();
 
-  // 🔑 [핵심] useFormationDrag 훅 호출 및 반환 값 구조 분해 할당
   const {
     formationsByQuarter,
     activeQuarter,
@@ -36,9 +36,9 @@ const FormationPage = ({ teamId }) => {
     activeSlot,
     handleSlotClick,
     handleAssignPlayer,
-    resetFormation, // 초기화 함수
-    isDirty, // ⚽️ [추가] 포메이션 변경 여부 상태
-    resetIsDirty, // ⭐️ [수정] isDirty 상태를 초기화하는 함수를 가져옵니다.
+    resetFormation,
+    isDirty, // 추가] 포메이션 변경 여부 상태
+    resetIsDirty, // [수정] isDirty 상태를 초기화하는 함수를 가져옵니다.
   } = useFormationDrag();
 
   // 🔑 API 관련 상태 및 로직 (훅과 독립적)
@@ -53,23 +53,45 @@ const FormationPage = ({ teamId }) => {
   const [savedFormations, setSavedFormations] = useState([]);
   const [loadError, setLoadError] = useState(null);
 
-  // 💡 [추가] 다이얼로그를 제어할 공통 상태
+  // 💡 [추가] 선수별 쿼터 현황 패널 상태
+  const [isQuarterPanelOpen, setIsQuarterPanelOpen] = useState(false);
+
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {}, // 확인 버튼을 눌렀을 때 실행될 함수
-    // 💡 [추가] 버튼 텍스트를 상태로 관리
+    onConfirm: () => {},
     confirmText: '확인',
     cancelText: '취소',
   });
 
   // 현재 편집 중인 포메이션의 이름을 저장합니다.
-  const [editingFormationId, setEditingFormationId] = useState(null); // ⭐️ [전제] 수정 모드 ID 상태
+  const [editingFormationId, setEditingFormationId] = useState(null);
   const [currentFormationName, setCurrentFormationName] = useState(null);
 
   const [isPlayerDetailModalOpen, setIsPlayerDetailModalOpen] = useState(false);
-  const [selectedPlayerSlot, setSelectedPlayerSlot] = useState(null); // 클릭된 슬롯의 전체 정보 저장
+  const [selectedPlayerSlot, setSelectedPlayerSlot] = useState(null);
+
+  // [추가] 패널이 열렸을 때 배경 스크롤을 막는 useEffect
+  useEffect(() => {
+    // [수정] 실제 스크롤이 발생하는 html과 body 태그를 직접 제어합니다.
+    if (isQuarterPanelOpen) {
+      // 패널이 열리면 스크롤을 막습니다.
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // 패널이 닫히면 스크롤을 복원합니다.
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+
+    // 컴포넌트가 언마운트될 때 스크롤을 복원하는 cleanup 함수
+    return () => {
+      // 💡 [수정] 컴포넌트가 사라질 때도 스크롤 상태를 확실히 원복합니다.
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [isQuarterPanelOpen]);
 
   // 컴포넌트 마운트 시 팀 선수 목록을 불러옵니다.
   useEffect(() => {
@@ -124,7 +146,7 @@ const FormationPage = ({ teamId }) => {
     return () => {
       setActions(null);
     };
-  }, [setActions, handleLoad]); // handleLoad는 useCallback으로 감싸는 것이 좋습니다.
+  }, [setActions, handleLoad]);
 
   // Link State에서 팀 정보 추출
   const stateTeam = location.state?.team;
@@ -152,34 +174,32 @@ const FormationPage = ({ teamId }) => {
     }
   }, [blocker]);
 
-  // 💡 버튼 클릭 핸들러 (뷰 로직)
   const handleReset = () => {
     setConfirmDialog({
       isOpen: true,
       title: '포메이션 초기화',
       message: '정말로 현재 포메이션을 초기 상태로 되돌리시겠습니까?\n저장되지 않은 변경 사항은 손실됩니다.',
       onConfirm: () => {
-        resetFormation(); // 훅에서 제공하는 초기화 함수 호출
+        resetFormation();
         setCurrentFormationName(null);
         setEditingFormationId(null);
       },
-      // 💡 [추가] 초기화 상황에 맞는 버튼 텍스트 설정
       confirmText: '초기화',
       cancelText: '취소',
     });
   };
 
   const handleSave = async () => {
-    // ⭐️ [수정] 모든 쿼터를 순회하며 검사
+    // [수정] 모든 쿼터를 순회하며 검사
     let hasContent = false;
     for (const quarterNum in formationsByQuarter) {
       const formation = formationsByQuarter[quarterNum];
 
-      // 💡 [개선] 선수가 한 명이라도 배정된 쿼터인지 확인합니다.
+      // [개선] 선수가 한 명이라도 배정된 쿼터인지 확인합니다.
       const isQuarterStarted = formation.some((player) => player.dbPlayerId !== null);
       if (isQuarterStarted) {
         hasContent = true;
-        // 💡 [개선] 시작된 쿼터는 11명이 모두 배정되었는지 확인합니다.
+        // [개선] 시작된 쿼터는 11명이 모두 배정되었는지 확인합니다.
         const isComplete = formation.every((player) => player.dbPlayerId !== null);
         if (!isComplete) {
           toast.error(`저장할 수 없습니다: ${quarterNum}쿼터의 모든 포지션에 선수를 할당해 주세요.`);
@@ -195,7 +215,7 @@ const FormationPage = ({ teamId }) => {
     setIsSaveModalOpen(true);
   };
 
-  // 1. 필수 데이터 (팀 이름)가 없는 경우 즉시 오류 메시지 반환
+  // 필수 데이터 (팀 이름)가 없는 경우 즉시 오류 메시지 반환
   if (!stateTeam?.name) {
     return (
       <div className="p-4 text-center text-red-600">
@@ -220,11 +240,11 @@ const FormationPage = ({ teamId }) => {
     const nameToDisplay = newFormationName;
     setIsSaveModalOpen(false);
 
-    // 1. 저장할 데이터 준비
+    // 저장할 데이터 준비
     const placementsData = [];
     for (const quarterNum in formationsByQuarter) {
       const formationForQuarter = formationsByQuarter[quarterNum];
-      // 💡 [개선] 선수가 한 명이라도 배정된 쿼터의 정보만 저장합니다.
+      // [개선] 선수가 한 명이라도 배정된 쿼터의 정보만 저장합니다.
       if (formationForQuarter.some((player) => player.dbPlayerId !== null)) {
         formationForQuarter.forEach((player) => {
           placementsData.push({
@@ -246,7 +266,6 @@ const FormationPage = ({ teamId }) => {
     try {
       let response;
 
-      // ⭐️ [핵심] editingFormationId가 있으면 PUT (수정), 없으면 POST (생성)
       if (editingFormationId) {
         // PUT /api/formation/{formationId} (수정)
         response = await api.updateFormation(editingFormationId, formationSaveData); // 🚨 API 메소드 확인
@@ -256,15 +275,14 @@ const FormationPage = ({ teamId }) => {
         response = await api.saveTeamFormation(formationSaveData);
         toast.success(`포메이션 "${nameToDisplay}"이(가) 성공적으로 저장되었습니다!`);
 
-        // ⭐️ 생성 후 ID를 저장하여 즉시 수정 모드로 전환
+        // 생성 후 ID를 저장하여 즉시 수정 모드로 전환
         setEditingFormationId(response.data.formationId);
       }
 
-      // ⭐️ 성공 시 현재 포메이션 이름 업데이트
+      // 성공 시 현재 포메이션 이름 업데이트
       setCurrentFormationName(nameToDisplay);
-      setNewFormationName(''); // 이름 입력 필드 초기화
-      resetIsDirty(); // ⭐️ [수정] 저장 성공 후, 변경 상태를 초기화합니다.
-      // isDirty 상태를 false로 초기화하는 로직 추가 필요
+      setNewFormationName('');
+      resetIsDirty();
     } catch (error) {
       console.error('포메이션 저장 중 API 오류:', error.response?.data?.message || error.message);
       toast.error('포메이션 처리(저장/수정)에 실패했습니다.');
@@ -317,7 +335,7 @@ const FormationPage = ({ teamId }) => {
     }
   };
 
-  // 💡 [추가] 실제 포메이션을 불러오는 로직을 별도 함수로 분리
+  // [추가] 실제 포메이션을 불러오는 로직을 별도 함수로 분리
   const proceedToLoadFormation = async (formation) => {
     const formationId = formation.formationId;
     if (!formationId) return;
@@ -327,7 +345,7 @@ const FormationPage = ({ teamId }) => {
       const response = await api.getFormationDetail(formationId);
       const detailedFormation = response.data;
 
-      // ⭐️ [수정] 훅의 loadFormation에 placements 배열과 전체 선수 목록을 함께 전달합니다.
+      // [수정] 훅의 loadFormation에 placements 배열과 전체 선수 목록을 함께 전달합니다.
       loadFormation(detailedFormation.placements, teamPlayers);
 
       setEditingFormationId(formationId);
@@ -397,17 +415,17 @@ const FormationPage = ({ teamId }) => {
     // 이외의 포지션은 가장 뒤로
   };
 
-  // ⭐️ [핵심 수정] 현재 "활성화된 쿼터"에 배정된 선수 ID 목록 생성
+  // [핵심 수정] 현재 "활성화된 쿼터"에 배정된 선수 ID 목록 생성
   const assignedPlayerIds = (formationsByQuarter[activeQuarter] || [])
     .map((player) => player.dbPlayerId) // dbPlayerId 목록 추출
     .filter((id) => id !== null); // null이 아닌 유효한 ID만 필터링
 
-  // ⭐️ [핵심 추가] 배정 가능한 선수 목록 생성
+  // [핵심 추가] 배정 가능한 선수 목록 생성
   const availablePlayers = teamPlayers
     .filter(
       (player) => !assignedPlayerIds.includes(player.id) // player.id는 dbPlayerId와 동일
     )
-    // ⭐️ [핵심 추가] 포지션 순서에 따라 정렬
+    // [핵심 추가] 포지션 순서에 따라 정렬
     .sort((a, b) => {
       // a와 b 선수의 포지션 순서 값을 가져옵니다. (없으면 99로 밀어냄)
       const orderA = positionSortOrder[a.position] || 99;
@@ -420,147 +438,155 @@ const FormationPage = ({ teamId }) => {
     });
 
   return (
-    <div className="p-0">
-      {/* H2 태그를 flex 컨테이너로 사용하고, 좌우 패딩을 줍니다. */}
-      <div className="px-4 py-1 flex justify-between items-center">
-        {/* 1. 팀 이름 (왼쪽 정렬) */}
-        <h2 className="text-xl font-bold flex items-center text-white shrink">
-          <img src={teamFormationIcon} alt="포메이션 아이콘" className="w-6 h-6 mr-2" />
-          {teamName}
+    // [수정] overflow-hidden을 제거하고, 패널과 메인 콘텐츠를 나란히 배치하기 위해 flex를 사용합니다.
+    // [수정] overflow-x-hidden을 추가하여 가로 스크롤을 방지합니다.
+    <div className="relative flex w-full h-full overflow-x-hidden">
+      {/* 💡 [수정] 패널이 열렸을 때 이 div의 스크롤을 막기 위해 overflow-hidden을 동적으로 추가합니다. */}
+      <div
+        className={`flex-1 transition-all duration-300 ease-in-out ${
+          isQuarterPanelOpen ? 'w-2/3 overflow-hidden' : 'w-full'
+        }`}
+      >
+        <div className="px-4 py-1 flex justify-between items-center">
+          {/* 1. 팀 이름 (왼쪽 정렬) */}
+          <h2 className="text-xl font-bold flex items-center text-white shrink">
+            <img src={teamFormationIcon} alt="포메이션 아이콘" className="w-6 h-6 mr-2" />
+            {teamName}
 
-          {currentFormationName && (
-            <span className="ml-3 text-base font-semibold text-[#D9D9D9]">{currentFormationName}</span>
+            {currentFormationName && (
+              <span className="ml-3 text-base font-semibold text-[#D9D9D9]">{currentFormationName}</span>
+            )}
+          </h2>
+          {/* 2. 기능 버튼 그룹 (오른쪽 정렬) */}
+          <div className="flex items-center space-x-2">
+            {/* 초기화 버튼 */}
+            <button
+              onClick={handleReset}
+              className="p-2 text-sm text-red-500 hover:bg-red-900 rounded-full transition duration-150"
+              aria-label="포메이션 초기화"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </button>
+            {/* 공유 버튼 (기능 구현 예정) */}
+            <button
+              onClick={() => {
+                /* TODO: 공유 기능 구현 */
+              }}
+              className="p-2 text-sm text-blue-500 hover:bg-blue-900 rounded-full transition duration-150"
+              aria-label="포메이션 공유"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            {/* 저장 버튼 */}
+            <button
+              onClick={handleSave}
+              className="p-2 text-sm text-green-600 hover:bg-green-900 rounded-full transition duration-150"
+              aria-label="포메이션 저장"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* [추가] 쿼터 선택 UI */}
+        <div className="px-4 py-2 flex justify-center space-x-2">
+          {[1, 2, 3, 4].map((q) => (
+            <button
+              key={q}
+              onClick={() => setActiveQuarter(q)}
+              className={`px-4 py-1 rounded-lg text-sm font-semibold transition-colors ${
+                activeQuarter === q
+                  ? 'bg-[#63FF70] text-black'
+                  : 'bg-[#0D1117] text-white border border-[#6B6B6B] hover:bg-gray-700'
+              }`}
+            >
+              {q}Q
+            </button>
+          ))}
+        </div>
+
+        {/* 🔑 [배치] 축구장 컴포넌트를 배치합니다. */}
+        <div className="mx-auto">
+          <FootballPitch ref={setPitchRef}>
+            {/* 🔑 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
+            {formationsByQuarter[activeQuarter]?.map((player) => {
+              return (
+                <div
+                  key={player.id}
+                  className="absolute"
+                  // 🔑 [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
+                  onMouseDown={(e) => handleMouseDown(e, player.id)}
+                  onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
+                  onClick={() => {
+                    if (player.dbPlayerId) {
+                      // Case 1: 선수가 할당되어 있음 -> 상세/수정/삭제 모달 띄우기
+                      setSelectedPlayerSlot(player);
+                      setIsPlayerDetailModalOpen(true);
+                    } else {
+                      // Case 2: 슬롯만 있음 -> 선수 목록 모달 띄우기 (기존 로직)
+                      handleSlotClick(player.id, player.posKey);
+                    }
+                  }}
+                  style={{
+                    top: `${player.y}%`,
+                    left: `${player.x}%`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: player.id === draggingId ? 10 : 1, // 드래그 중인 요소를 위로 올림
+                    touchAction: 'none', // ⚽️ 드래그 중 브라우저의 스크롤/새로고침 동작 방지
+                  }}
+                >
+                  <PlayerIcon player={player} shirtColor="bg-blue-600" />
+                </div>
+              );
+            })}
+          </FootballPitch>
+
+          {/* 🔑 [핵심] 3. PlayerListPanel Modal 구현 */}
+          {activeSlot && (
+            <PlayerListModal
+              isOpen={!!activeSlot}
+              onClose={() => handleSlotClick(null)}
+              title={`'${activeSlot.posKey}' 포지션 선수 배정`}
+            >
+              <PlayerListPanel
+                allPlayers={availablePlayers}
+                loading={playersLoading}
+                // 🔑 클릭된 선수를 activeSlot에 배정하는 함수 연결
+                onPlayerClick={(player) => handleAssignPlayer(activeSlot.id, player)}
+              />
+            </PlayerListModal>
           )}
-        </h2>
-        {/* 2. 기능 버튼 그룹 (오른쪽 정렬) */}
-        <div className="flex space-x-2">
-          {/* 초기화 버튼 */}
-          <button
-            onClick={handleReset}
-            className="p-2 text-sm text-red-500 hover:bg-red-900 rounded-full transition duration-150"
-            aria-label="포메이션 초기화"
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
 
-          {/* 공유 버튼 (기능 구현 예정) */}
-          <button
-            onClick={() => {
-              /* TODO: 공유 기능 구현 */
-            }}
-            className="p-2 text-sm text-blue-500 hover:bg-blue-900 rounded-full transition duration-150"
-            aria-label="포메이션 공유"
-          >
-            <Share2 className="w-5 h-5" />
-          </button>
-          {/* 저장 버튼 */}
-          <button
-            onClick={handleSave}
-            className="p-2 text-sm text-green-600 hover:bg-green-900 rounded-full transition duration-150"
-            aria-label="포메이션 저장"
-          >
-            <Download className="w-5 h-5" />
-          </button>
+          {/* 포메이션 불러오기 모달 */}
+          <FormationLoadModal
+            isOpen={isLoadModalOpen}
+            onClose={handleCloseLoadModal}
+            savedFormations={savedFormations}
+            onLoad={handleSelectFormation}
+            onDelete={handleDeleteFormation}
+            loadError={loadError}
+          />
+
+          {/* 포메이션 이름 입력 모달 */}
+          <FormationNameModal
+            isOpen={isSaveModalOpen}
+            onClose={handleCloseSaveModal}
+            onConfirm={handleConfirmSave} // 저장 로직 연결
+            value={newFormationName}
+            onChange={(e) => setNewFormationName(e.target.value)}
+          />
+
+          {/* 선수 상세 정보/수정/삭제 모달 */}
+          <PlayerDetailModal
+            isOpen={isPlayerDetailModalOpen}
+            onClose={handleClosePlayerDetailModal}
+            selectedSlot={selectedPlayerSlot}
+            onRemove={handleRemovePlayerFromSlot} // 삭제 로직 연결
+            onModify={handleModifyPlayer} // 수정 로직 연결
+          />
         </div>
       </div>
 
-      {/* ⭐️ [추가] 쿼터 선택 UI */}
-      <div className="px-4 py-2 flex justify-center space-x-2">
-        {[1, 2, 3, 4].map((q) => (
-          <button
-            key={q}
-            onClick={() => setActiveQuarter(q)}
-            className={`px-4 py-1 rounded-lg text-sm font-semibold transition-colors ${
-              activeQuarter === q
-                ? 'bg-[#63FF70] text-black'
-                : 'bg-[#0D1117] text-white border border-[#6B6B6B] hover:bg-gray-700'
-            }`}
-          >
-            {q}Q
-          </button>
-        ))}
-      </div>
-
-      {/* 🔑 [배치] 축구장 컴포넌트를 배치합니다. */}
-      <div className="mx-auto">
-        <FootballPitch ref={setPitchRef}>
-          {/* 🔑 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
-          {formationsByQuarter[activeQuarter]?.map((player) => {
-            return (
-              <div
-                key={player.id}
-                className="absolute"
-                // 🔑 [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
-                onMouseDown={(e) => handleMouseDown(e, player.id)}
-                onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
-                onClick={() => {
-                  if (player.dbPlayerId) {
-                    // Case 1: 선수가 할당되어 있음 -> 상세/수정/삭제 모달 띄우기
-                    setSelectedPlayerSlot(player);
-                    setIsPlayerDetailModalOpen(true);
-                  } else {
-                    // Case 2: 슬롯만 있음 -> 선수 목록 모달 띄우기 (기존 로직)
-                    handleSlotClick(player.id, player.posKey);
-                  }
-                }}
-                style={{
-                  top: `${player.y}%`,
-                  left: `${player.x}%`,
-                  transform: 'translate(-50%, -50%)',
-                  zIndex: player.id === draggingId ? 10 : 1, // 드래그 중인 요소를 위로 올림
-                  touchAction: 'none', // ⚽️ 드래그 중 브라우저의 스크롤/새로고침 동작 방지
-                }}
-              >
-                <PlayerIcon player={player} shirtColor="bg-blue-600" />
-              </div>
-            );
-          })}
-        </FootballPitch>
-
-        {/* 🔑 [핵심] 3. PlayerListPanel Modal 구현 */}
-        {activeSlot && (
-          <PlayerListModal
-            isOpen={!!activeSlot}
-            onClose={() => handleSlotClick(null)}
-            title={`'${activeSlot.posKey}' 포지션 선수 배정`}
-          >
-            <PlayerListPanel
-              allPlayers={availablePlayers}
-              loading={playersLoading}
-              // 🔑 클릭된 선수를 activeSlot에 배정하는 함수 연결
-              onPlayerClick={(player) => handleAssignPlayer(activeSlot.id, player)}
-            />
-          </PlayerListModal>
-        )}
-
-        {/* 포메이션 불러오기 모달 */}
-        <FormationLoadModal
-          isOpen={isLoadModalOpen}
-          onClose={handleCloseLoadModal}
-          savedFormations={savedFormations}
-          onLoad={handleSelectFormation}
-          onDelete={handleDeleteFormation}
-          loadError={loadError}
-        />
-
-        {/* 포메이션 이름 입력 모달 */}
-        <FormationNameModal
-          isOpen={isSaveModalOpen}
-          onClose={handleCloseSaveModal}
-          onConfirm={handleConfirmSave} // 저장 로직 연결
-          value={newFormationName}
-          onChange={(e) => setNewFormationName(e.target.value)}
-        />
-
-        {/* 선수 상세 정보/수정/삭제 모달 */}
-        <PlayerDetailModal
-          isOpen={isPlayerDetailModalOpen}
-          onClose={handleClosePlayerDetailModal}
-          selectedSlot={selectedPlayerSlot}
-          onRemove={handleRemovePlayerFromSlot} // 삭제 로직 연결
-          onModify={handleModifyPlayer} // 수정 로직 연결
-        />
-      </div>
       {/* 💡 [추가] 공통 확인 다이얼로그 렌더링 */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
@@ -579,6 +605,50 @@ const FormationPage = ({ teamId }) => {
         }}
         confirmText={confirmDialog.confirmText}
         cancelText={confirmDialog.cancelText}
+      />
+
+      {/* 💡 [수정] 패널 열기/닫기 버튼 그룹 */}
+      {/* 열기 버튼 */}
+      <button
+        onClick={() => setIsQuarterPanelOpen(true)}
+        className={`absolute top-1/2 right-0 transform -translate-y-1/2 z-30
+                    bg-[#0D1117] border border-r-0 border-[#6B6B6B] 
+                    p-2 rounded-l-lg text-gray-400 hover:text-white hover:bg-gray-700 
+                    transition-all duration-300 ease-in-out
+                    ${isQuarterPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        aria-label="선수별 쿼터 현황 보기"
+      >
+        <PanelRightOpen className="w-5 h-5" />
+      </button>
+
+      {/* 💡 [추가] 닫기 버튼 */}
+      <button
+        onClick={() => setIsQuarterPanelOpen(false)}
+        className={`absolute top-1/2 transform -translate-y-1/2 z-30
+                    bg-[#0D1117] border border-r-0 border-[#6B6B6B] 
+                    p-2 rounded-l-lg text-gray-400 hover:text-white hover:bg-gray-700 
+                    transition-all duration-300 ease-in-out
+                    right-[60%] sm:right-72
+                    ${isQuarterPanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        aria-label="패널 닫기"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      {/* 💡 [추가] 패널이 열렸을 때 표시될 반투명 배경(Backdrop) */}
+      {isQuarterPanelOpen && (
+        <div
+          className="absolute inset-0 bg-black/50 z-20" // 패널(z-30)보다 낮은 z-index
+          onClick={() => setIsQuarterPanelOpen(false)}
+        />
+      )}
+
+      {/* 💡 [추가] 선수별 쿼터 현황 패널 렌더링 */}
+      <PlayerQuarterStatusPanel
+        isOpen={isQuarterPanelOpen}
+        onClose={() => setIsQuarterPanelOpen(false)}
+        formationsByQuarter={formationsByQuarter}
+        teamPlayers={teamPlayers}
       />
     </div>
   );
