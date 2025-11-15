@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
   console.log(`[Vite Config] 로드된 API Base URL: ${API_BASE_URL}`);
 
   if (!API_BASE_URL) {
-    // 5. 로드 실패 시 서버 실행을 멈추고 사용자에게 .env 확인을 강제합니다. (하드코딩 방지)
+    // 5. 로드 실패 시 서버 실행을 멈추고 사용자에게 .env 확인을 강제합니다.
     throw new Error(
       '환경 변수 VITE_API_BASE_URL을 로드하지 못했습니다. .env 파일을 확인하거나 로드 코드를 점검해주세요.'
     );
