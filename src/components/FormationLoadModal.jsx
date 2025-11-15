@@ -1,6 +1,7 @@
 // src/components/FormationLoadModal.jsx
 import React from 'react';
-import { Trash2, List, CircleX } from 'lucide-react';
+import { CircleX } from 'lucide-react';
+import SecondaryButton from './common/SecondaryButton';
 
 const FormationLoadModal = ({ isOpen, onClose, savedFormations, onLoad, onDelete, loadError }) => {
   if (!isOpen) return null;
@@ -47,12 +48,7 @@ const FormationLoadModal = ({ isOpen, onClose, savedFormations, onLoad, onDelete
         </div>
 
         <div className="flex justify-center mt-4">
-          <button
-            onClick={onClose}
-            className="py-1 px-4 bg-[#0D1117] border border-[#6B6B6B] text-white rounded-xl hover:bg-gray-400"
-          >
-            닫기
-          </button>
+          <SecondaryButton onClick={onClose}>닫기</SecondaryButton>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 // src/components/PlayerListModal.jsx
 
 import React from 'react';
+import SecondaryButton from './common/SecondaryButton';
 
 const PlayerListModal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -17,12 +18,7 @@ const PlayerListModal = ({ isOpen, onClose, title, children }) => {
 
         <div className="p-4 max-h-[80vh] overflow-x-auto">{children}</div>
         <div className="flex justify-center space-x-3 pb-4">
-          <button
-            onClick={onClose}
-            className="py-1 px-4 text-white border border-[#6B6B6B] bg-[#0D1117] hover:text-gray-700 p-1 rounded-xl hover:bg-gray-100"
-          >
-            닫기
-          </button>
+          <SecondaryButton onClick={onClose}>닫기</SecondaryButton>
         </div>
       </div>
     </div>

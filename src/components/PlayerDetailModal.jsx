@@ -1,6 +1,9 @@
 // src/components/PlayerDetailModal.jsx
 import React from 'react';
 import PlayerCard from './PlayerCard';
+import SecondaryButton from './common/SecondaryButton';
+import RedBtn from './common/RedBtn';
+import GreenBtn from './common/GreenBtn';
 
 const PlayerDetailModal = ({ isOpen, onClose, selectedSlot, onRemove, onModify }) => {
   if (!isOpen || !selectedSlot) return null;
@@ -23,26 +26,11 @@ const PlayerDetailModal = ({ isOpen, onClose, selectedSlot, onRemove, onModify }
 
         <div className="flex justify-center space-x-3">
           {/* 1. 삭제 버튼 */}
-          <button
-            onClick={onRemove}
-            className="py-1 px-4 border border-[#6B6B6B] bg-[#0D1117] text-[#FF4444] rounded-xl hover:bg-red-600 hover:text-white"
-          >
-            제거
-          </button>
+          <RedBtn onClick={onRemove}>제거</RedBtn>
           {/* 2. 수정 버튼 (선수 목록 모달로 연결) */}
-          <button
-            onClick={onModify}
-            className="py-1 px-4 border border-[#6B6B6B] bg-[#0D1117] text-[#63FF70] rounded-xl hover:bg-[#63FF70] hover:text-white"
-          >
-            수정
-          </button>
+          <GreenBtn onClick={onModify}>수정</GreenBtn>
           {/* 3. 취소 버튼 */}
-          <button
-            onClick={onClose}
-            className="py-1 px-4 border border-[#6B6B6B] bg-[#0D1117] text-white rounded-xl hover:bg-gray-500"
-          >
-            취소
-          </button>
+          <SecondaryButton onClick={onClose}>취소</SecondaryButton>
         </div>
       </div>
     </div>

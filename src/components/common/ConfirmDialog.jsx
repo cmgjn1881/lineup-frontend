@@ -1,4 +1,6 @@
 import React from 'react';
+import SecondaryButton from './SecondaryButton';
+import RedBtn from './RedBtn';
 
 const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = '확인', cancelText = '취소' }) => {
   if (!isOpen) return null;
@@ -9,18 +11,8 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
         <h3 className="text-xl text-white font-bold mb-4">{title}</h3>
         <p className="text-white mb-8 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-center space-x-4">
-          <button
-            onClick={onClose}
-            className="py-1 px-6 bg-[#0D1117] text-white border border-[#6B6B6B] rounded-xl hover:bg-gray-700 transition"
-          >
-            {cancelText}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="py-1 px-6 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
-          >
-            {confirmText}
-          </button>
+          <SecondaryButton onClick={onClose}>{cancelText}</SecondaryButton>
+          <RedBtn onClick={onConfirm}>{confirmText}</RedBtn>
         </div>
       </div>
     </div>

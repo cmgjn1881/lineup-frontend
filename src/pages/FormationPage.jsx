@@ -6,7 +6,7 @@ import FootballPitch from '../components/FootballPitch';
 import PlayerIcon from '../components/PlayerIcon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import PlayerListPanel from '../components/PlayerListPanel';
-import { RotateCcw, List, Download, Share2, PanelRightOpen, X } from 'lucide-react';
+import { RotateCcw, List, Download, Share2, PanelRightOpen, X, Loader2 } from 'lucide-react';
 import TrophyIcon from '../assets/TrophyIcon.svg';
 import { useApiClient } from '../api/ApiClient';
 import PlayerListModal from '../components/PlayerListModal';
@@ -15,6 +15,8 @@ import { useHeaderActions } from '../context/HeaderActionsContext.jsx';
 import FormationNameModal from '../components/FormationNameModal';
 import FormationLoadModal from '../components/FormationLoadModal';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import ShareFormationModal from '../components/ShareFormationModal.jsx';
+import * as htmlToImage from 'html-to-image';
 import PlayerQuarterStatusPanel from '../components/PlayerQuarterStatusPanel';
 import { usePageNavigation } from '../hooks/usePageNavigation.js';
 import { useFormationManager } from '../hooks/useFormationManager.js';
@@ -39,6 +41,7 @@ const FormationPage = ({ teamId }) => {
     handleAssignPlayer,
     resetFormation,
     isDirty,
+    pitchRef,
     resetIsDirty,
   } = useFormationDrag();
 
@@ -47,6 +50,8 @@ const FormationPage = ({ teamId }) => {
   const [isQuarterPanelOpen, setIsQuarterPanelOpen] = useState(false);
   const [isPlayerDetailModalOpen, setIsPlayerDetailModalOpen] = useState(false);
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   // 💡 [추가] 포메이션 초기화 시 실행될 콜백
   const onResetConfirm = () => {
@@ -237,8 +242,97 @@ const FormationPage = ({ teamId }) => {
       }
     });
 
+  const handleShare = async (quartersToShare) => {
+    // quartersToShare는 ['1', '3']과 같은 배열입니다.
+    // 1. 모달을 닫고, 이미지 생성 시작을 알립니다.
+    setIsShareModalOpen(false);
+    setIsSharing(true);
+    toast.loading('이미지 생성 중...');
+
+    const images = [];
+    // useFormationDrag 훅에서 가져온 pitchRef를 사용합니다.
+    // 이 ref는 FootballPitch 컴포넌트를 가리킵니다.
+    const pitchElement = pitchRef;
+
+    if (!pitchElement) {
+      toast.error('오류: 이미지 생성 대상을 찾을 수 없습니다.');
+      setIsSharing(false);
+      return;
+    }
+
+    // ⭐️ 핵심 로직: for...of 루프를 사용하여 선택된 쿼터를 하나씩 순차적으로 처리합니다.
+    for (const quarter of quartersToShare) {
+      // 2. 이미지로 만들 쿼터의 포메이션이 화면에 그려지도록 activeQuarter 상태를 변경합니다.
+      setActiveQuarter(Number(quarter));
+
+      // 3. React가 DOM을 다시 그릴 때까지 잠시 기다립니다. (매우 중요!)
+      // 이 지연 시간이 없으면, 화면이 바뀌기 전에 이미지를 캡처하여 잘못된 이미지가 생성될 수 있습니다.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 4. html-to-image 라이브러리를 사용하여 현재 보이는 pitchElement를 이미지 데이터(Blob)로 변환합니다.
+      try {
+        const imageBlob = await htmlToImage.toBlob(pitchElement, {
+          quality: 0.95,
+          // 경기장 배경색과 유사하게 지정하여 이미지의 빈 공간이 투명하게 나오지 않도록 합니다.
+          backgroundColor: '#0A1F0C',
+        });
+        // 5. 생성된 이미지 데이터를 파일 객체로 만들어 배열에 추가합니다.
+        images.push(new File([imageBlob], `formation_Q${quarter}.png`, { type: 'image/png' }));
+      } catch (error) {
+        console.error(`쿼터 ${quarter} 이미지 생성 실패:`, error);
+        toast.error(`쿼터 ${quarter} 이미지 생성에 실패했습니다.`);
+      }
+    }
+
+    toast.dismiss(); // 로딩 중 토스트 메시지를 닫습니다.
+
+    // 6. 생성된 이미지들을 공유합니다.
+    if (images.length > 0) {
+      // 6-1. 모바일 환경 등 Web Share API를 지원하는 경우
+      if (navigator.share && navigator.canShare({ files: images })) {
+        try {
+          await navigator.share({
+            files: images,
+            title: `${teamName} 포메이션`,
+            text: `[${teamName}] 포메이션을 확인하세요.`,
+          });
+        } catch (error) {
+          // 사용자가 공유를 취소한 경우(AbortError)는 오류로 처리하지 않습니다.
+          if (error.name !== 'AbortError') {
+            toast.error('공유에 실패했습니다.');
+          }
+        }
+      } else {
+        // 6-2. Web Share API를 지원하지 않는 경우 (PC 브라우저 등)
+        // 생성된 이미지를 하나씩 다운로드하도록 합니다.
+        toast('이미지를 다운로드합니다.');
+        images.forEach((file) => {
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(file);
+          link.download = file.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
+        });
+      }
+    }
+
+    // 7. 모든 과정이 끝나면 로딩 상태를 해제합니다.
+    setIsSharing(false);
+  };
+
   return (
     <div className="relative flex w-full h-full overflow-x-hidden">
+      {/* 💡 [추가] 이미지 생성 중 로딩 오버레이 */}
+      {isSharing && (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-50">
+          <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
+          <p className="mt-4 text-lg text-white font-semibold">포메이션 이미지 생성 중...</p>
+          <p className="mt-1 text-sm text-gray-400">잠시만 기다려주세요.</p>
+        </div>
+      )}
+
       <div
         className={`flex-1 transition-all duration-300 ease-in-out ${
           isQuarterPanelOpen ? 'w-2/3 overflow-hidden' : 'w-full'
@@ -264,10 +358,10 @@ const FormationPage = ({ teamId }) => {
             >
               <RotateCcw className="w-5 h-5" />
             </button>
-            {/* 공유 버튼 (기능 구현 예정) */}
+            {/* 공유 버튼 */}
             <button
               onClick={() => {
-                /* TODO: 공유 기능 구현 */
+                setIsShareModalOpen(true);
               }}
               className="p-2 text-sm text-blue-500 hover:bg-blue-900 rounded-full transition duration-150"
               aria-label="포메이션 공유"
@@ -285,7 +379,7 @@ const FormationPage = ({ teamId }) => {
           </div>
         </div>
 
-        {/* [추가] 쿼터 선택 UI */}
+        {/* 쿼터 선택 UI */}
         <div className="px-4 py-2 flex justify-center space-x-2">
           {[1, 2, 3, 4].map((q) => (
             <button
@@ -302,16 +396,16 @@ const FormationPage = ({ teamId }) => {
           ))}
         </div>
 
-        {/* 🔑 [배치] 축구장 컴포넌트를 배치합니다. */}
+        {/* 축구장 컴포넌트를 배치합니다. */}
         <div className="mx-auto">
           <FootballPitch ref={setPitchRef}>
-            {/* 🔑 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
+            {/* 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
             {formationsByQuarter[activeQuarter]?.map((player) => {
               return (
                 <div
                   key={player.id}
                   className="absolute"
-                  // 🔑 [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
+                  // [핵심] 드래그 시작 이벤트 핸들러를 이 div로 이동/적용합니다.
                   onMouseDown={(e) => handleMouseDown(e, player.id)}
                   onTouchStart={(e) => handleMouseDown(e, player.id)} // 모바일 터치 이벤트 대비
                   onClick={() => {
@@ -338,7 +432,7 @@ const FormationPage = ({ teamId }) => {
             })}
           </FootballPitch>
 
-          {/* 🔑 [핵심] 3. PlayerListPanel Modal 구현 */}
+          {/* PlayerListPanel Modal 구현 */}
           {activeSlot && (
             <PlayerListModal
               isOpen={!!activeSlot}
@@ -348,7 +442,7 @@ const FormationPage = ({ teamId }) => {
               <PlayerListPanel
                 allPlayers={availablePlayers}
                 loading={playersLoading}
-                // 🔑 클릭된 선수를 activeSlot에 배정하는 함수 연결
+                // 클릭된 선수를 activeSlot에 배정하는 함수 연결
                 onPlayerClick={(player) => handleAssignPlayer(activeSlot.id, player)}
               />
             </PlayerListModal>
@@ -380,6 +474,12 @@ const FormationPage = ({ teamId }) => {
             selectedSlot={selectedPlayerSlot}
             onRemove={handleRemovePlayerFromSlot} // 삭제 로직 연결
             onModify={handleModifyPlayer} // 수정 로직 연결
+          />
+          <ShareFormationModal
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+            onSubmit={handleShare}
+            formationsByQuarter={formationsByQuarter}
           />
         </div>
       </div>
