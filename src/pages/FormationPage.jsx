@@ -21,6 +21,7 @@ import PlayerQuarterStatusPanel from '../components/PlayerQuarterStatusPanel';
 import { usePageNavigation } from '../hooks/usePageNavigation.js';
 import { useFormationManager } from '../hooks/useFormationManager.js';
 import toast from 'react-hot-toast';
+import LoadingOverlay from '../components/common/LoadingOverlay.jsx';
 
 const FormationPage = ({ teamId }) => {
   const { setActions } = useHeaderActions();
@@ -71,6 +72,8 @@ const FormationPage = ({ teamId }) => {
     savedFormations,
     loadError,
     setLoadError,
+    isLoadingFormation,
+    isProcessing,
     currentFormationName,
     handleLoad,
     handleSave,
@@ -324,14 +327,14 @@ const FormationPage = ({ teamId }) => {
 
   return (
     <div className="relative flex w-full h-full overflow-x-hidden">
-      {/* 💡 [추가] 이미지 생성 중 로딩 오버레이 */}
-      {isSharing && (
-        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-50">
-          <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
-          <p className="mt-4 text-lg text-white font-semibold">포메이션 이미지 생성 중...</p>
-          <p className="mt-1 text-sm text-gray-400">잠시만 기다려주세요.</p>
-        </div>
-      )}
+      <LoadingOverlay
+        isActive={isLoadingFormation}
+        mainText="포메이션 불러오는 중..."
+        subText="선택하신 포메이션을 적용하고 있습니다."
+      />
+      {/* 💡 [수정] 공통 로딩 오버레이 컴포넌트 사용 */}
+      <LoadingOverlay isActive={isProcessing} mainText="포메이션 저장 중..." subText="잠시만 기다려주세요." />
+      <LoadingOverlay isActive={isSharing} mainText="포메이션 이미지 생성 중..." subText="잠시만 기다려주세요." />
 
       <div
         className={`flex-1 transition-all duration-300 ease-in-out ${

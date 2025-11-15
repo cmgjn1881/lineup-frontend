@@ -20,6 +20,8 @@ export const useFormationManager = ({
   const [loadError, setLoadError] = useState(null);
   const [editingFormationId, setEditingFormationId] = useState(null);
   const [currentFormationName, setCurrentFormationName] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingFormation, setIsLoadingFormation] = useState(false);
 
   const handleLoad = useCallback(async () => {
     setLoadError(null);
@@ -64,6 +66,7 @@ export const useFormationManager = ({
 
     const nameToDisplay = newFormationName;
     setIsSaveModalOpen(false);
+    setIsProcessing(true);
 
     const placementsData = [];
     for (const quarterNum in formationsByQuarter) {
@@ -98,6 +101,8 @@ export const useFormationManager = ({
     } catch (error) {
       toast.error('포메이션 처리(저장/수정)에 실패했습니다.');
       console.error(error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -125,6 +130,7 @@ export const useFormationManager = ({
     async (formation) => {
       const formationId = formation.formationId;
       if (!formationId) return;
+      setIsLoadingFormation(true);
       try {
         const response = await api.getFormationDetail(formationId);
         const detailedFormation = response.data;
@@ -135,6 +141,8 @@ export const useFormationManager = ({
       } catch (error) {
         toast.error('포메이션을 불러오는 데 실패했습니다.');
         console.error(error);
+      } finally {
+        setIsLoadingFormation(false);
       }
     },
     [api, loadFormation, teamPlayers]
@@ -174,6 +182,8 @@ export const useFormationManager = ({
     editingFormationId,
     currentFormationName,
     handleLoad,
+    isLoadingFormation,
+    isProcessing,
     handleSave,
     handleConfirmSave,
     handleDeleteFormation,

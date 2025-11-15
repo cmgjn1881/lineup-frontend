@@ -1,6 +1,7 @@
 // src/components/FormationNameModal.jsx
 import React from 'react';
 import SecondaryButton from './common/SecondaryButton.jsx';
+import GreenBtn from './common/GreenBtn.jsx';
 import TextInput from './common/TextInput.jsx';
 
 const FormationNameModal = ({ isOpen, onClose, onConfirm, value, onChange }) => {
@@ -23,13 +24,9 @@ const FormationNameModal = ({ isOpen, onClose, onConfirm, value, onChange }) => 
         />
         <div className="pt-12 flex justify-center space-x-3">
           <SecondaryButton onClick={onClose}>취소</SecondaryButton>
-          <button
-            onClick={handleConfirm}
-            className="py-1 px-4 bg-green-600 text-white border border-[#6B6B6B] rounded-xl hover:bg-green-700"
-            disabled={!value.trim()}
-          >
+          <GreenBtn onClick={handleConfirm} disabled={!value.trim()}>
             저장
-          </button>
+          </GreenBtn>
         </div>
       </div>
     </div>
