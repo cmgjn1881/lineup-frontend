@@ -8,7 +8,7 @@
 
 | 플랫폼 | 접근 방법 | 링크 |
 | :--- | :--- | :--- |
-| **🌐 iOS (PWA)** | **사파리(Safari)로 접속** 후 '홈 화면에 추가'하여 앱처럼 사용 가능 | [[Web Service URL](https://lineup-frontend-nine.vercel.app)] |
+| **🌐 iOS (PWA)** | **사파리(Safari)로 접속** 후 '홈 화면에 추가'하여 앱처럼 사용 가능 | [[Web(IOS) Service URL](https://lineup-frontend-nine.vercel.app)] |
 | **📱 Android** | Google Play Store에서 앱 다운로드 | [[Android App (Google Play)](https://play.google.com/store/apps/details?id=com.wiseduck.squadbuilder&hl=ko)] |
 
 ---
