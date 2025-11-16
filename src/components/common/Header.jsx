@@ -30,7 +30,7 @@ const Header = () => {
   }
 
   return (
-    <nav className="bg-black border-b border-[#6B6B6B] fixed top-0 left-0 w-full z-10 h-14">
+    <header className="bg-black border-b border-[#6B6B6B] fixed top-0 left-0 w-full md:max-w-md md:left-1/2 md:-translate-x-1/2 z-10 h-14">
       <div className="max-w-sm mx-auto px-4">
         <div className="flex justify-between items-center h-14">
           {/* 왼쪽 영역 (뒤로가기 버튼 + 페이지 제목) */}
@@ -46,7 +46,7 @@ const Header = () => {
           <div className="flex items-center">{actions}</div>
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
 

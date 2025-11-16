@@ -1,2 +1,18 @@
 /* 🔑 Tailwind CSS v4.x 공식 설정 방식 */
 @import 'tailwindcss';
+
+/* 💡 [수정] @layer base를 사용하여 index.css의 핵심 스타일을 통합합니다. */
+@layer base {
+  html {
+    /* 앱을 항상 다크 모드로 렌더링하도록 설정합니다. */
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    background-color: #202020; /* 👈 전체 페이지 배경을 검은색으로 설정합니다. */
+    margin: 0;
+  }
+}

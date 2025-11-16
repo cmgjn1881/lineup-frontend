@@ -85,7 +85,7 @@ const TeamPage = () => {
   return (
     <div className="p-4">
       <h1 className="font-bold text-white">팀 추가하기</h1>
-      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-3 pt-4 pb-4 border rounded-lg shadow-sm">
+      <form onSubmit={handleCreateTeam} className="flex space-x-2 mb-3 pt-4 pb-4 rounded-lg shadow-sm">
         <TextInput
           type="text"
           placeholder="새 팀 이름 (예: FC 서울 개발팀)"

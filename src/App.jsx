@@ -61,7 +61,7 @@ const AppContent = () => {
       {/* 💡 [최종 수정] main 태그를 absolute 포지셔닝으로 변경하여 헤더/푸터 사이의 공간을 정확히 차지하도록 합니다. */}
       {/* h-full과 padding을 함께 사용하던 문제를 근본적으로 해결합니다. */}
       <main
-        className={`w-full max-w-full mx-auto bg-black absolute inset-x-0 ${
+        className={`w-full md:max-w-md md:mx-auto bg-black absolute inset-x-0 ${
           isProfilePage ? 'overflow-y-hidden' : 'overflow-y-auto'
         } ${
           // 💡 [핵심 수정] 포메이션 페이지에서 '당겨서 새로고침' 방지
@@ -142,7 +142,7 @@ const router = createHashRouter([
 
 const App = () => (
   // 💡 [최종 수정] h-dvh 대신 h-full을 사용하여 부모(#root)의 높이를 100% 채웁니다.
-  <div className="h-full bg-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+  <div className="h-full" style={{ fontFamily: 'Inter, sans-serif' }}>
     {/* AuthProvider는 레이아웃 안에서 라우터만 감싸서 인증 상태를 관리합니다. */}
     {/* AuthProvider가 로딩 중일 때는 RouterProvider가 렌더링되지 않습니다. */}
     <AuthProvider>

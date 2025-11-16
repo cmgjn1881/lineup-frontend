@@ -19,7 +19,7 @@ const FooterNav = () => {
   // 모바일 앱 하단 탭 바 스타일
   return (
     // 💡 [핵심 수정] 다시 fixed 포지셔닝을 사용하여 뷰포트 하단에 고정합니다.
-    <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-[#6B6B6B] shadow-2xl z-20">
+    <footer className="fixed bottom-0 left-0 w-full bg-black border-t border-[#6B6B6B] z-20 md:max-w-md md:left-1/2 md:-translate-x-1/2">
       <div className="max-w-sm mx-auto flex justify-around items-center h-16">
         {/* 1. 팀 관리 (TeamPage) 버튼 */}
         <Link // 🔑 a 태그 대신 Link 사용
