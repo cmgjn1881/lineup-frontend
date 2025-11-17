@@ -312,15 +312,20 @@ const FormationPage = ({ teamId }) => {
         // 6-2. Web Share API를 지원하지 않는 경우 (PC 브라우저 등)
         // 생성된 이미지를 하나씩 다운로드하도록 합니다.
         toast('이미지를 다운로드합니다.');
-        images.forEach((file) => {
+        // 💡 [수정] forEach 대신 for...of 루프와 시간 지연을 사용하여 다운로드 안정성을 높입니다.
+        for (const file of images) {
           const link = document.createElement('a');
           link.href = URL.createObjectURL(file);
           link.download = file.name;
           document.body.appendChild(link);
           link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(link.href);
-        });
+
+          // 💡 [추가] 브라우저가 다운로드를 처리할 시간을 주기 위해 setTimeout을 사용합니다.
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+          }, 100);
+        }
       }
     }
 
@@ -537,7 +542,7 @@ const FormationPage = ({ teamId }) => {
                     bg-[#0D1117] border border-r-0 border-[#6B6B6B] 
                     p-2 rounded-l-lg text-gray-400 hover:text-white hover:bg-gray-700 
                     transition-all duration-300 ease-in-out
-                    right-[60%] sm:right-72
+                    right-[60%] sm:right-67
                     ${isQuarterPanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="패널 닫기"
       >
