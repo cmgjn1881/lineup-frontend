@@ -53,6 +53,7 @@ const FormationPage = ({ teamId }) => {
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [capturingQuarter, setCapturingQuarter] = useState(null); // << 이 줄을 추가하세요.
 
   // 💡 [추가] 포메이션 초기화 시 실행될 콜백
   const onResetConfirm = () => {
@@ -267,6 +268,7 @@ const FormationPage = ({ teamId }) => {
     for (const quarter of quartersToShare) {
       // 2. 이미지로 만들 쿼터의 포메이션이 화면에 그려지도록 activeQuarter 상태를 변경합니다.
       setActiveQuarter(Number(quarter));
+      setCapturingQuarter(quarter); // << 이미지 캡처 직전에 상태 설정
 
       // 3. React가 DOM을 다시 그릴 때까지 잠시 기다립니다. (매우 중요!)
       // 이 지연 시간이 없으면, 화면이 바뀌기 전에 이미지를 캡처하여 잘못된 이미지가 생성될 수 있습니다.
@@ -287,6 +289,7 @@ const FormationPage = ({ teamId }) => {
       }
     }
 
+    setCapturingQuarter(null); // << 루프가 끝난 후 상태 초기화
     toast.dismiss(); // 로딩 중 토스트 메시지를 닫습니다.
 
     // 6. 생성된 이미지들을 공유합니다.
@@ -402,6 +405,12 @@ const FormationPage = ({ teamId }) => {
         {/* 축구장 컴포넌트를 배치합니다. */}
         <div className="mx-auto">
           <FootballPitch ref={setPitchRef}>
+            {/* 쿼터 정보 표시 (이미지 캡처 시에만 보임) */}
+            {capturingQuarter && (
+              <div className="absolute top-2 left-2 z-20 bg-black/60 text-white text-2xl font-bold p-2 rounded-lg">
+                {capturingQuarter}Q
+              </div>
+            )}
             {/* 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
             {formationsByQuarter[activeQuarter]?.map((player) => {
               return (

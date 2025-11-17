@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApiClient } from '../api/ApiClient';
 import { useAuth } from '../context/useAuth';
 import SignupForm from './SignupForm';
-import KakaoLoginButton from './KakaoLoginButton';
+import KakaoLoginButton from '../components/KakaoLoginButton';
 import mainLogo from '../assets/mainlogo.svg';
 
 const LoginPage = () => {
