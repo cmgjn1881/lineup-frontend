@@ -55,13 +55,15 @@ const FormationPage = ({ teamId }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [capturingQuarter, setCapturingQuarter] = useState(null); // << 이 줄을 추가하세요.
 
-  // 💡 [추가] 포메이션 초기화 시 실행될 콜백
+  const [referees, setReferees] = useState({ 1: '', 2: '', 3: '', 4: '' });
+  // 포메이션 초기화 시 실행될 콜백
   const onResetConfirm = () => {
     resetFormation();
     resetFormationName(); // 훅에서 가져온 함수 호출
+    setReferees({ 1: '', 2: '', 3: '', 4: '' });
   };
 
-  // 💡 [추가] 커스텀 훅 호출
+  // 커스텀 훅 호출
   const { confirmDialog, setConfirmDialog, handleReset } = usePageNavigation(isDirty, onResetConfirm);
   const {
     isSaveModalOpen,
@@ -91,9 +93,11 @@ const FormationPage = ({ teamId }) => {
     resetIsDirty,
     setConfirmDialog,
     teamPlayers,
+    referees,
+    setReferees,
   });
 
-  // [추가] 패널이 열렸을 때 배경 스크롤을 막는 useEffect
+  // 패널이 열렸을 때 배경 스크롤을 막는 useEffect
   useEffect(() => {
     if (isQuarterPanelOpen) {
       document.documentElement.style.overflow = 'hidden';
@@ -253,6 +257,20 @@ const FormationPage = ({ teamId }) => {
     setIsSharing(true);
     toast.loading('이미지 생성 중...');
 
+    // 캡처 전, 심판 이름이 비어있으면 공백으로 임시 설정
+    const originalReferees = { ...referees };
+    const tempReferees = { ...referees };
+    let changed = false;
+    for (const q of quartersToShare) {
+      if (!tempReferees[q]?.trim()) {
+        tempReferees[q] = ' ';
+        changed = true;
+      }
+    }
+    if (changed) {
+      setReferees(tempReferees);
+    }
+
     const images = [];
     // useFormationDrag 훅에서 가져온 pitchRef를 사용합니다.
     // 이 ref는 FootballPitch 컴포넌트를 가리킵니다.
@@ -290,6 +308,10 @@ const FormationPage = ({ teamId }) => {
     }
 
     setCapturingQuarter(null); // << 루프가 끝난 후 상태 초기화
+    // 캡처 후, 원래 심판 이름으로 복원
+    if (changed) {
+      setReferees(originalReferees);
+    }
     toast.dismiss(); // 로딩 중 토스트 메시지를 닫습니다.
 
     // 6. 생성된 이미지들을 공유합니다.
@@ -412,10 +434,24 @@ const FormationPage = ({ teamId }) => {
           <FootballPitch ref={setPitchRef}>
             {/* 쿼터 정보 표시 (이미지 캡처 시에만 보임) */}
             {capturingQuarter && (
-              <div className="absolute top-2 left-2 z-20 bg-black/60 text-white text-2xl font-bold p-2 rounded-lg">
+              <div className="absolute top-2 left-2 z-20 bg-black/60 text-white text-xs font-bold p-2 rounded-lg flex items-center justify-center">
                 {capturingQuarter}Q
               </div>
             )}
+            {/* 심판 정보 입력 UI */}
+            <div className="absolute top-2 right-2 z-20 flex items-center space-x-2 bg-black/60 p-2 rounded-lg">
+              <span className="text-white font-bold text-xs shrink-0">심판:</span>
+              <input
+                type="text"
+                value={referees[activeQuarter] || ''}
+                onChange={(e) => setReferees((prev) => ({ ...prev, [activeQuarter]: e.target.value }))}
+                placeholder="이름 입력"
+                maxLength="4"
+                className="bg-transparent text-white text-xs w-12 border-b border-gray-500 focus:outline-none focus:border-white transition-colors"
+                // 이미지 캡처 시 placeholder가 보이지 않도록, 캡처 중에는 비활성화합니다.
+                disabled={!!capturingQuarter}
+              />
+            </div>
             {/* 11명 선수 아이콘 렌더링 (formationsByQuarter 상태 사용) */}
             {formationsByQuarter[activeQuarter]?.map((player) => {
               return (

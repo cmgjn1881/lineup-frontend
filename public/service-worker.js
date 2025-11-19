@@ -1,6 +1,6 @@
 // public/service-worker.js
 
-const CACHE_NAME = 'lineup-cache-v12'; // 💡 버전 번호를 올려줍니다.
+const CACHE_NAME = 'lineup-cache-v13'; // 💡 버전 번호를 올려줍니다.
 
 const urlsToCache = [
   '/',

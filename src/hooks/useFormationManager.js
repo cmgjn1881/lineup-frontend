@@ -12,6 +12,8 @@ export const useFormationManager = ({
   resetIsDirty,
   setConfirmDialog,
   teamPlayers,
+  referees,
+  setReferees,
 }) => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newFormationName, setNewFormationName] = useState('');
@@ -83,7 +85,7 @@ export const useFormationManager = ({
       }
     }
 
-    const formationSaveData = { teamId, name: newFormationName, placements: placementsData };
+    const formationSaveData = { teamId, name: newFormationName, placements: placementsData, referees };
 
     try {
       let response;
@@ -135,6 +137,19 @@ export const useFormationManager = ({
         const response = await api.getFormationDetail(formationId);
         const detailedFormation = response.data;
         loadFormation(detailedFormation.placements, teamPlayers);
+
+        if (detailedFormation.referees && typeof detailedFormation.referees === 'object') {
+          setReferees({
+            1: '',
+            2: '',
+            3: '',
+            4: '',
+            ...detailedFormation.referees,
+          });
+        } else {
+          setReferees({ 1: '', 2: '', 3: '', 4: '' });
+        }
+
         setEditingFormationId(formationId);
         setCurrentFormationName(detailedFormation.name);
         toast.success(`포메이션 "${detailedFormation.name}"이(가) 경기장에 적용되었습니다.`);
@@ -145,7 +160,7 @@ export const useFormationManager = ({
         setIsLoadingFormation(false);
       }
     },
-    [api, loadFormation, teamPlayers]
+    [api, loadFormation, teamPlayers, setReferees]
   );
 
   const handleSelectFormation = (formation) => {
