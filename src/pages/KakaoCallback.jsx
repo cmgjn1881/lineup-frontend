@@ -28,7 +28,7 @@ const KakaoCallback = () => {
       code: code,
     });
 
-    // 💡 [개선] client_secret 값이 존재할 경우에만 파라미터에 추가합니다.
+    // 💡 [개선] client_secret 값이 존재할 경우에만 파라미터에 추가합니다. 현재는 사용 안함
     if (KAKAO_CLIENT_SECRET) {
       params.append('client_secret', KAKAO_CLIENT_SECRET);
     }
@@ -50,8 +50,9 @@ const KakaoCallback = () => {
   const loginToServer = useCallback(
     async (kakaoAccessToken) => {
       const serverResponse = await api.socialLogin('kakao', kakaoAccessToken);
-      const { accessToken, refreshToken, userId, username } = serverResponse.data;
-      await auth.loginWithToken(accessToken, refreshToken, userId, username);
+      // 💡 [수정] 응답 데이터에서 email을 추출하여 loginWithToken으로 전달합니다.
+      const { accessToken, refreshToken, userId, username, email } = serverResponse.data;
+      await auth.loginWithToken(accessToken, refreshToken, userId, username, email);
       navigate('/teams', { replace: true });
     },
     [api, auth, navigate]
