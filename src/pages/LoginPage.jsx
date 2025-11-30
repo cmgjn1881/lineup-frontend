@@ -8,6 +8,7 @@ import { useAuth } from '../context/useAuth';
 import SignupForm from './SignupForm';
 import KakaoLoginButton from '../components/KakaoLoginButton';
 import mainLogo from '../assets/mainlogo.svg';
+import mainText from '../assets/MainText.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -87,8 +88,9 @@ const LoginPage = () => {
 
       {/* 화면 중앙에 소셜 로그인 버튼을 배치하기 위해 flexbox를 사용합니다. */}
       <div className="flex flex-col justify-center items-center h-[calc(100vh-8rem)]">
-        {/* 💡 [수정] h2 텍스트를 로고 이미지로 교체합니다. */}
-        <img src={mainLogo} alt="Lineup Maker Logo" className="w-48 mb-12" />
+        {/* 💡 [수정] 텍스트 로고와 심볼 로고를 함께 배치합니다. */}
+        <img src={mainText} alt="Squad Builder" className="w-64 mb-4" />
+        <img src={mainLogo} alt="Lineup Maker Logo" className="w-48 mb-10" />
         {/* 💡 카카오 로그인 버튼 렌더링 */}
         <KakaoLoginButton />
       </div>
