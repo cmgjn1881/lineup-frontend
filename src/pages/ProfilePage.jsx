@@ -41,10 +41,12 @@ const ProfilePage = () => {
             <span className="font-medium text-[#63FF70]">{userName}</span>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span className="text-white">{auth.isSocial ? '로그인 방식' : '이메일'}</span>
-            <span className="font-medium text-gray-800">
-              {auth.isSocial ? <span className="text-[#FBD300] font-bold">카카오 로그인</span> : userEmail}
-            </span>
+            {auth.isSocial ? (
+              <span className="text-[#FBD300] font-bold">카카오 로그인</span>
+            ) : (
+              <span className="text-white">이메일</span>
+            )}
+            <span className="font-medium text-gray-400">{userEmail}</span>
           </div>
         </div>
       </div>

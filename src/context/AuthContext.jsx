@@ -17,8 +17,6 @@ export const AuthProvider = ({ children }) => {
 
   const [isLoading, setIsLoading] = useState(true);
 
-  // 💡 [핵심 수정] 초기 로드 시 localStorage에서 인증 정보를 동기적으로 확인합니다.
-  // API 호출 없이, 저장된 정보만으로 인증 상태를 복원합니다.
   useEffect(() => {
     const storedToken = localStorage.getItem('accessToken');
     const storedUserName = localStorage.getItem('userName');
@@ -108,18 +106,25 @@ export const AuthProvider = ({ children }) => {
   );
 
   const loginWithToken = useCallback(
-    async (accessToken, refreshToken, newUserId, username) => {
+    // 💡 [수정] email 파라미터를 추가합니다.
+    async (accessToken, refreshToken, newUserId, username, email) => {
       try {
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('userId', newUserId);
         localStorage.setItem('userName', username);
         localStorage.setItem('isSocial', 'true');
+        // 💡 [추가] 이메일이 존재하면 localStorage에 저장합니다.
+        if (email) {
+          localStorage.setItem('userEmail', email);
+        }
 
         setAccessToken(accessToken);
         setRefreshToken(refreshToken);
         setUserId(newUserId);
         setUserName(username);
+        // 💡 [추가] 이메일이 존재하면 상태를 업데이트합니다.
+        if (email) setUserEmail(email);
         setIsSocial(true);
         setIsAuthenticated(true);
         return Promise.resolve();
@@ -129,11 +134,9 @@ export const AuthProvider = ({ children }) => {
         return Promise.reject(error);
       }
     },
-    [setAccessToken, setRefreshToken, setUserId, setUserName, setIsSocial, setIsAuthenticated, logout]
+    [setAccessToken, setRefreshToken, setUserId, setUserName, setIsSocial, setIsAuthenticated, logout, setUserEmail]
   );
 
-  // 💡 [수정] ApiClient 생성자에 setTokens 대신 refreshTokens를 전달합니다.
-  // withdraw 함수 내에서 사용되는 api 인스턴스가 토큰 재발급 로직을 올바르게 사용하도록 수정합니다.
   const api = useMemo(() => new ApiClient(refreshTokens, logout), [refreshTokens, logout]);
 
   const executeWithdraw = useCallback(
@@ -195,7 +198,7 @@ export const AuthProvider = ({ children }) => {
   if (isLoading) {
     // 💡 [핵심 수정] AuthProvider는 더 이상 레이아웃을 그리지 않습니다.
     // 로딩 중에는 자식 컴포넌트(RouterProvider)의 렌더링을 막기 위해 아무것도 반환하지 않습니다.
-    return null; // 또는 <></> (React.Fragment)
+    return null;
   }
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;

@@ -24,7 +24,7 @@ export class ApiClient {
 
     // 1. 요청 Interceptor: Access Token 추가
     this.client.interceptors.request.use((config) => {
-      // 💡 [수정] AuthContext의 상태 대신 localStorage에서 직접 토큰을 읽어옵니다.
+      // AuthContext의 상태 대신 localStorage에서 직접 토큰을 읽어옵니다.
       const token = localStorage.getItem('accessToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
